@@ -1,0 +1,295 @@
+# =========================
+# Django
+# =========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Django specific
+*.sqlite3
+*.sqlite
+db.sqlite3
+db.sqlite
+
+# Django migrations (puedes comentar esto si quieres versionar las migraciones)
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Media files
+media/
+uploads/
+
+# Static files (generalmente se recolectan durante el despliegue)
+staticfiles/
+*.css.map
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =========================
+# Python
+# =========================
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =========================
+# Node.js dependencies
+# =========================
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+backend/*.log
+frontend/*.log
+
+# =========================
+# Environment files
+# =========================
+.env.local
+.env.*.local
+
+# =========================
+# Build outputs
+# =========================
+dist/
+build/
+frontend/build/
+frontend/.next/
+frontend/out/
+backend/dist/
+backend/build/
+*.tsbuildinfo
+
+# =========================
+# Hardhat / Solidity artifacts
+# =========================
+artifacts/
+cache/
+typechain/
+coverage/
+test/snapshots/
+
+# =========================
+# Deployed addresses
+# =========================
+deployed_addresses.json
+deployed-new.json
+# =========================
+# Backup Base de datos
+# =========================
+backend/clean_backup.json
+backend/backup.json
+backend/backup_without_users.json
+# =========================
+# IPFS / temporary hashes
+# =========================
+backend/tmp/
+backend/ipfs_hashes/
+*.hash
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.bak
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# =========================
+# React / Frontend specific
+# =========================
+frontend/.eslintcache
+frontend/.turbo/
+frontend/.cache/
+
+# =========================
+# Misc / Temporary
+# =========================
+*.pid
+*.seed
+*.old
+*.backup
+
+# =========================
+# Database
+# =========================
+# Ficheros de base de datos (excepto si quieres versionar un SQLite de desarrollo)
+*.db
+*.db-journal
+
+# =========================
+# StarkNet / Cairo
+# =========================
+# Directorio de compilación de Scarb
+starknet/target/
+**/target/
+
+# Archivos de compilación de contratos
+*.sierra
+*.casm
+*.json
+
+# Archivos de desarrollo de StarkNet
+*.build/
+
+# =========================
+# Python / Django
+# =========================
+# Archivos de base de datos de desarrollo
+*.sqlite3
+*.sqlite
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Archivos de entorno
+.env
+.env.local
+
+# Logs de aplicaciones
+*.log
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# Directorios de IDE
+.vscode/
+.idea/
+
+# =========================
+# Node.js (si aplica)
+# =========================
+node_modules/
+npm-debug.log*
+
+# =========================
+# Archivos de backup temporales
+# =========================
+backup.json
+*.backup
+*.bak
+
+# =========================
+# Archivos de construcción
+# =========================
+build/
+dist/
+*.egg-info/
+
+# =========================
+# Cache de Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+
+# =========================
+# Testing y coverage
+# =========================
+.coverage
+htmlcov/
+.pytest_cache/
+
+# =========================
+# archivos de Starknet
+# =========================
+
+*.sh
