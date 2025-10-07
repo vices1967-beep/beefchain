@@ -1,46 +1,9 @@
-# **🐄 BeefChain \- Sistema de Trazabilidad Cárnica con Blockchain**
-
-[https://img.shields.io/badge/StarkNet-L2\_Solution-blue](https://img.shields.io/badge/StarkNet-L2_Solution-blue)  
-[https://img.shields.io/badge/Cairo-Smart\_Contracts-orange](https://img.shields.io/badge/Cairo-Smart_Contracts-orange)  
-[https://img.shields.io/badge/Next.js-14.0-black](https://img.shields.io/badge/Next.js-14.0-black)  
-[https://img.shields.io/badge/License-MIT-green](https://img.shields.io/badge/License-MIT-green)
-
-## **📋 Descripción**
-
-BeefChain es una plataforma integral de trazabilidad para la industria cárnica que utiliza StarkNet para garantizar transparencia, seguridad y eficiencia en toda la cadena de suministro. Desde el productor hasta el consumidor final, cada paso queda registrado de forma inmutable en la blockchain.
-
-## **🌟 Características Principales**
-
-### **🔗 Trazabilidad Completa**
-
-* Historial Inmutable: Cada transacción registrada en StarkNet  
-* Códigos QR Dinámicos: Códigos únicos por corte con datos en tiempo real  
-* Auditoría Completa: Trail completo desde nacimiento hasta venta
-
-### **🌱 Sostenibilidad**
-
-* Reportes de impacto ambiental  
-* Estimación de huella de carbono  
-* Métricas de eficiencia en cadena de suministro
-
-### **🔒 Seguridad y Roles**
-
-* Sistema de permisos basado en roles (Access Control)  
-* Múltiples niveles de administración  
-* Funciones específicas por tipo de usuario
-
-## **🏗️ Arquitectura del Sistema**
-
-Hazlo en ingles, pero con la forma de \# para titulo y asi sucesivamente para poder copiar y pegar en archivo .md en github
-
-Read 8 web pages
-
 # **BeefChain \- Blockchain Beef Traceability System**
 
-[https://img.shields.io/badge/StarkNet-L2\_Solution-blue](https://img.shields.io/badge/StarkNet-L2_Solution-blue)  
-[https://img.shields.io/badge/Cairo-Smart\_Contracts-orange](https://img.shields.io/badge/Cairo-Smart_Contracts-orange)  
-[https://img.shields.io/badge/Next.js-14.0-black](https://img.shields.io/badge/Next.js-14.0-black)  
-[https://img.shields.io/badge/License-MIT-green](https://img.shields.io/badge/License-MIT-green)
+![StarkNet](https://img.shields.io/badge/StarkNet-L2_Solution-blue)
+![Cairo](https://img.shields.io/badge/Cairo-Smart_Contracts-orange)
+![Next.js](https://img.shields.io/badge/Next.js-14.0-black)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ## **📋 Description**
 
@@ -200,21 +163,67 @@ BeefChain is a comprehensive traceability platform for the meat industry that us
 
 `text`
 
-`beefchain/`  
-`├── frontend/                 # Next.js + StarkNet React`  
-`│   ├── src/`
- |   |   |__ apps/             # Aplications
-`│   │   ├── contracts/        # Configuration and ABI`  
-`│   │   ├── components/       # React components`  
-`│   │   └── hooks/           # Custom StarkNet hooks`  
-`│   └── .env.local           # Environment variables`  
-`├── starknet/                # Cairo contracts`  
-`│   ├── contracts/           # .cairo source code`  
-`│   └── scripts/             # Deployment scripts`  
-`├── backend/                 # Django API (future)`  
-`├── mobile/                  # React Native (future)`
-
-`└── docs/                    # Documentation`
+`beefchain/frontend/`  
+`├── 📁 src/`  
+`│ ├── 📁 app/ # Next.js App Router Pages`  
+`│ │ ├── 📁 admin/ # Admin dashboard`  
+`│ │ ├── 📁 certification/ # Certification interface`  
+`│ │ ├── 📁 consumidor/ # Consumer portal`  
+`│ │ ├── 📁 exportador/ # Exporter management`  
+`│ │ ├── 📁 frigorifico/ # Slaughterhouse operations`  
+`│ │ ├── 📁 productor/ # Producer management`  
+`│ │ └── 📁 veterinario/ # Veterinarian portal`  
+`│ ├── 📁 components/ # React Components`  
+`│ │ ├── 📁 admin/ # Admin components`  
+`│ │ │ ├── AdminDashboard.tsx`  
+`│ │ │ ├── RoleManagement.tsx`  
+`│ │ │ └── SystemStats.tsx`  
+`│ │ ├── 📁 common/ # Shared components`  
+`│ │ │ ├── ConnectWallet.tsx`  
+`│ │ │ ├── ProjectWallets.tsx`  
+`│ │ │ └── TestConnection.tsx`  
+`│ │ ├── 📁 exportador/ # Exporter components`  
+`│ │ │ ├── ExportBatchList.tsx`  
+`│ │ │ ├── ExportBatchPreparation.tsx`  
+`│ │ │ └── TransferToExportador.tsx`  
+`│ │ ├── 📁 frigorifico/ # Slaughterhouse components`  
+`│ │ │ └── FrigorificoPanel.tsx`  
+`│ │ ├── 📁 productor/ # Producer components`  
+`│ │ │ ├── AnimalList.tsx`  
+`│ │ │ ├── BatchManagement.tsx`  
+`│ │ │ ├── CreateAnimalForm.tsx`  
+`│ │ │ ├── DiagnosticTool.tsx`  
+`│ │ │ ├── ProducerStats.tsx`  
+`│ │ │ ├── TransferAnimalForm.tsx`  
+`│ │ │ └── VeterinarianManagement.tsx`  
+`│ │ └── 📁 veterinario/ # Veterinarian components`  
+`│ │ ├── AnimalHealthRecords.tsx`  
+`│ │ ├── AuthorizedAnimals.tsx`  
+`│ │ └── QuarantineManagement.tsx`  
+`│ ├── 📁 contracts/ # Smart Contract Integration`  
+`│ │ ├── AnimalNFT.abi.json # Contract ABI`  
+`│ │ ├── animal-nft-abi.ts # TypeScript ABI`  
+`│ │ ├── chipypay-config.ts # Payment configuration`  
+`│ │ └── config.ts # Main contract config`  
+`│ ├── 📁 hooks/ # Custom React Hooks`  
+`│ │ └── useAnimalContract.ts # Contract interaction hook`  
+`│ ├── 📁 providers/ # React Providers`  
+`│ │ └── starknet-provider.tsx # StarkNet wallet provider`  
+`│ ├── 📁 services/ # Business Logic Services`  
+`│ │ ├── animalContractService.ts # Animal contract service`  
+`│ │ ├── chipypay-service.ts # Payment service`  
+`│ │ └── contractService.ts # General contract service`  
+`│ ├── 📁 types/ # TypeScript Definitions`  
+`│ │ └── starknet-window.d.ts # StarkNet window types`  
+`│ └── 📁 utils/ # Utility Functions`  
+`├── 📁 public/ # Static Assets`  
+`│ ├── next.svg`  
+`│ ├── vercel.svg`  
+`│ └── *.svg icons`  
+`├── package.json # Dependencies`  
+`├── next.config.ts # Next.js configuration`  
+`├── tsconfig.json # TypeScript configuration`  
+`└── eslint.config.mjs # ESLint configuration`
 
 ## **🌐 Network Configuration**
 
