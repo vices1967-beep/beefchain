@@ -335,3 +335,4 @@ ehthumbs.db
 Thumbs.db
 .backup
 .env.local.backup
+copy/

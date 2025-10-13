@@ -3,7 +3,7 @@ export const ANIMAL_NFT_ABI = [
   // ============ CONSTRUCTOR ============
   {
     type: 'constructor',
-    stateMutability: 'external',
+    name: 'constructor',
     inputs: [
       { name: 'admin', type: 'core::starknet::contract_address::ContractAddress' }
     ],
@@ -38,8 +38,8 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'account', type: 'core::starknet::contract_address::ContractAddress' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'nombre', type: 'core::felt252' },
           { name: 'direccion', type: 'core::starknet::contract_address::ContractAddress' },
           { name: 'fecha_registro', type: 'core::integer::u64' },
@@ -80,6 +80,7 @@ export const ANIMAL_NFT_ABI = [
   },
 
   // ============ FUNCIONES DE PRODUCTOR ============
+  // ============ FUNCIONES DE CREACIÓN Y REGISTRO ============
   {
     type: 'function',
     name: 'create_animal_simple',
@@ -152,11 +153,11 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'batch_id', type: 'core::integer::u128' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           {
-            type: 'tuple',
-            members: [
+            type: 'core::tuple',
+            components: [
               { name: 'propietario', type: 'core::starknet::contract_address::ContractAddress' },
               { name: 'frigorifico', type: 'core::starknet::contract_address::ContractAddress' },
               { name: 'fecha_creacion', type: 'core::integer::u64' },
@@ -205,11 +206,11 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'producer', type: 'core::starknet::contract_address::ContractAddress' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
-          { name: 'total_animales', type: 'core::integer::u32' },
-          { name: 'lotes_activos', type: 'core::integer::u32' },
-          { name: 'peso_total', type: 'core::integer::u128' }
+        type: 'core::tuple',
+        components: [
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u128' }
         ]
       }
     ],
@@ -323,8 +324,8 @@ export const ANIMAL_NFT_ABI = [
       { name: 'animal_id', type: 'core::integer::u128' },
       {
         name: 'reading',
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'timestamp', type: 'core::integer::u64' },
           { name: 'temperature', type: 'core::integer::i32' },
           { name: 'humidity', type: 'core::integer::u32' },
@@ -347,8 +348,8 @@ export const ANIMAL_NFT_ABI = [
     ],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'timestamp', type: 'core::integer::u64' },
           { name: 'temperature', type: 'core::integer::i32' },
           { name: 'humidity', type: 'core::integer::u32' },
@@ -377,8 +378,8 @@ export const ANIMAL_NFT_ABI = [
       { name: 'animal_id', type: 'core::integer::u128' },
       {
         name: 'certification_data',
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'certification_date', type: 'core::integer::u64' },
           { name: 'certification_type', type: 'core::felt252' },
           { name: 'certifier', type: 'core::starknet::contract_address::ContractAddress' },
@@ -407,8 +408,8 @@ export const ANIMAL_NFT_ABI = [
       { name: 'batch_id', type: 'core::integer::u128' },
       {
         name: 'certification_data',
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'certification_date', type: 'core::integer::u64' },
           { name: 'certification_type', type: 'core::felt252' },
           { name: 'certifier', type: 'core::starknet::contract_address::ContractAddress' },
@@ -587,11 +588,11 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'animal_id', type: 'core::integer::u128' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           {
-            type: 'tuple',
-            members: [
+            type: 'core::tuple',
+            components: [
               { name: 'raza', type: 'core::integer::u128' },
               { name: 'fecha_nacimiento', type: 'core::integer::u64' },
               { name: 'peso', type: 'core::integer::u128' },
@@ -603,8 +604,8 @@ export const ANIMAL_NFT_ABI = [
               { name: 'lote_id', type: 'core::integer::u128' }
             ]
           },
-          { name: 'metadata_hash', type: 'core::felt252' },
-          { name: 'token_id', type: 'core::integer::u128' }
+          { type: 'core::integer::u128' },
+          { type: 'core::felt252' }
         ]
       }
     ],
@@ -619,8 +620,8 @@ export const ANIMAL_NFT_ABI = [
     ],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'tipo_corte', type: 'core::integer::u128' },
           { name: 'peso', type: 'core::integer::u128' },
           { name: 'fecha_procesamiento', type: 'core::integer::u64' },
@@ -640,8 +641,8 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'animal_id', type: 'core::integer::u128' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'certification_date', type: 'core::integer::u64' },
           { name: 'certification_type', type: 'core::felt252' },
           { name: 'certifier', type: 'core::starknet::contract_address::ContractAddress' },
@@ -658,18 +659,18 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'batch_id', type: 'core::integer::u128' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'export_date', type: 'core::integer::u64' },
           { name: 'destination_country', type: 'core::felt252' },
           { name: 'export_permit', type: 'core::felt252' },
           { name: 'container_id', type: 'core::felt252' },
           {
             name: 'temperature_range',
-            type: 'tuple',
-            members: [
-              { name: 'min_temp', type: 'core::integer::i32' },
-              { name: 'max_temp', type: 'core::integer::i32' }
+            type: 'core::tuple',
+            components: [
+              { type: 'core::integer::i32' },
+              { type: 'core::integer::i32' }
             ]
           },
           { name: 'exporter', type: 'core::starknet::contract_address::ContractAddress' }
@@ -698,8 +699,8 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'animal_id', type: 'core::integer::u128' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'raza', type: 'core::integer::u128' },
           { name: 'fecha_nacimiento', type: 'core::integer::u64' },
           { name: 'peso', type: 'core::integer::u128' },
@@ -764,15 +765,15 @@ export const ANIMAL_NFT_ABI = [
     inputs: [],
     outputs: [
       {
-        type: 'tuple',
-        members: [
-          { name: 'total_animales', type: 'core::integer::u128' },
-          { name: 'total_lotes', type: 'core::integer::u128' },
-          { name: 'total_cortes', type: 'core::integer::u128' },
-          { name: 'animales_procesados', type: 'core::integer::u128' },
-          { name: 'lotes_exportados', type: 'core::integer::u128' },
-          { name: 'animales_certificados', type: 'core::integer::u128' },
-          { name: 'cortes_certificados', type: 'core::integer::u128' }
+        type: 'core::tuple',
+        components: [
+          { type: 'core::integer::u128' },
+          { type: 'core::integer::u128' },
+          { type: 'core::integer::u128' },
+          { type: 'core::integer::u128' },
+          { type: 'core::integer::u128' },
+          { type: 'core::integer::u128' },
+          { type: 'core::integer::u128' }
         ]
       }
     ],
@@ -784,15 +785,15 @@ export const ANIMAL_NFT_ABI = [
     inputs: [],
     outputs: [
       {
-        type: 'tuple',
-        members: [
-          { name: 'productores_count', type: 'core::integer::u32' },
-          { name: 'frigorificos_count', type: 'core::integer::u32' },
-          { name: 'veterinarios_count', type: 'core::integer::u32' },
-          { name: 'certificadores_count', type: 'core::integer::u32' },
-          { name: 'exportadores_count', type: 'core::integer::u32' },
-          { name: 'distribuidores_count', type: 'core::integer::u32' },
-          { name: 'consumidores_count', type: 'core::integer::u32' }
+        type: 'core::tuple',
+        components: [
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u32' },
+          { type: 'core::integer::u32' }
         ]
       }
     ],
@@ -830,8 +831,8 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'qr_hash', type: 'core::felt252' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'raza', type: 'core::integer::u128' },
           { name: 'fecha_nacimiento', type: 'core::integer::u64' },
           { name: 'fecha_procesamiento', type: 'core::integer::u64' },
@@ -859,8 +860,8 @@ export const ANIMAL_NFT_ABI = [
     inputs: [{ name: 'qr_hash', type: 'core::felt252' }],
     outputs: [
       {
-        type: 'tuple',
-        members: [
+        type: 'core::tuple',
+        components: [
           { name: 'qr_hash', type: 'core::felt252' },
           { name: 'animal_id', type: 'core::integer::u128' },
           { name: 'corte_id', type: 'core::integer::u128' },
@@ -941,55 +942,60 @@ export const ANIMAL_NFT_ABI = [
   // ============ EVENTOS ============
   {
     type: 'event',
-    name: 'AnimalCreated',
-    inputs: [
-      { name: 'token_id', type: 'core::integer::u128' },
-      { name: 'owner', type: 'core::starknet::contract_address::ContractAddress' },
-      { name: 'metadata_hash', type: 'core::felt252' },
-      { name: 'raza', type: 'core::integer::u128' },
-      { name: 'peso', type: 'core::integer::u128' }
+    name: 'ganadochain::AnimalNFT::AnimalNFT::AnimalCreated',
+    kind: 'struct',
+    members: [
+      { name: 'token_id', type: 'core::integer::u128', kind: 'data' },
+      { name: 'owner', type: 'core::starknet::contract_address::ContractAddress', kind: 'data' },
+      { name: 'metadata_hash', type: 'core::felt252', kind: 'data' },
+      { name: 'raza', type: 'core::integer::u128', kind: 'data' },
+      { name: 'peso', type: 'core::integer::u128', kind: 'data' }
     ]
   },
   {
     type: 'event',
-    name: 'AnimalProcesado',
-    inputs: [
-      { name: 'animal_id', type: 'core::integer::u128' },
-      { name: 'frigorifico', type: 'core::starknet::contract_address::ContractAddress' },
-      { name: 'timestamp', type: 'core::integer::u64' }
+    name: 'ganadochain::AnimalNFT::AnimalNFT::AnimalProcesado',
+    kind: 'struct',
+    members: [
+      { name: 'animal_id', type: 'core::integer::u128', kind: 'data' },
+      { name: 'frigorifico', type: 'core::starknet::contract_address::ContractAddress', kind: 'data' },
+      { name: 'timestamp', type: 'core::integer::u64', kind: 'data' }
     ]
   },
   {
     type: 'event',
-    name: 'CorteCreado',
-    inputs: [
-      { name: 'animal_id', type: 'core::integer::u128' },
-      { name: 'corte_id', type: 'core::integer::u128' },
-      { name: 'tipo_corte', type: 'core::integer::u128' },
-      { name: 'peso', type: 'core::integer::u128' },
-      { name: 'frigorifico', type: 'core::starknet::contract_address::ContractAddress' },
-      { name: 'qr_hash', type: 'core::felt252' }
+    name: 'ganadochain::AnimalNFT::AnimalNFT::CorteCreado',
+    kind: 'struct',
+    members: [
+      { name: 'animal_id', type: 'core::integer::u128', kind: 'data' },
+      { name: 'corte_id', type: 'core::integer::u128', kind: 'data' },
+      { name: 'tipo_corte', type: 'core::integer::u128', kind: 'data' },
+      { name: 'peso', type: 'core::integer::u128', kind: 'data' },
+      { name: 'frigorifico', type: 'core::starknet::contract_address::ContractAddress', kind: 'data' },
+      { name: 'qr_hash', type: 'core::felt252', kind: 'data' }
     ]
   },
   {
     type: 'event',
-    name: 'AnimalCertified',
-    inputs: [
-      { name: 'animal_id', type: 'core::integer::u128' },
-      { name: 'certification_type', type: 'core::felt252' },
-      { name: 'certifier', type: 'core::starknet::contract_address::ContractAddress' },
-      { name: 'timestamp', type: 'core::integer::u64' }
+    name: 'ganadochain::AnimalNFT::AnimalNFT::AnimalCertified',
+    kind: 'struct',
+    members: [
+      { name: 'animal_id', type: 'core::integer::u128', kind: 'data' },
+      { name: 'certification_type', type: 'core::felt252', kind: 'data' },
+      { name: 'certifier', type: 'core::starknet::contract_address::ContractAddress', kind: 'data' },
+      { name: 'timestamp', type: 'core::integer::u64', kind: 'data' }
     ]
   },
   {
     type: 'event',
-    name: 'ExportBatchCreated',
-    inputs: [
-      { name: 'batch_id', type: 'core::integer::u128' },
-      { name: 'destination', type: 'core::felt252' },
-      { name: 'container_id', type: 'core::felt252' },
-      { name: 'exporter', type: 'core::starknet::contract_address::ContractAddress' },
-      { name: 'timestamp', type: 'core::integer::u64' }
+    name: 'ganadochain::AnimalNFT::AnimalNFT::ExportBatchCreated',
+    kind: 'struct',
+    members: [
+      { name: 'batch_id', type: 'core::integer::u128', kind: 'data' },
+      { name: 'destination', type: 'core::felt252', kind: 'data' },
+      { name: 'container_id', type: 'core::felt252', kind: 'data' },
+      { name: 'exporter', type: 'core::starknet::contract_address::ContractAddress', kind: 'data' },
+      { name: 'timestamp', type: 'core::integer::u64', kind: 'data' }
     ]
   }
 ] as const;

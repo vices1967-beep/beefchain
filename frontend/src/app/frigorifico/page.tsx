@@ -1,7 +1,7 @@
 // src/app/frigorifico/page.tsx - ACTUALIZADA CON FORMATO COHERENTE
 'use client';
 
-import { FrigorificoPanel } from '@/components/frigorifico/FrigorificoPanel';
+import { FrigorificoDashboard} from '@/components/frigorifico/FrigorificoPanel';
 import Link from 'next/link';
 import { useStarknet } from '@/providers/starknet-provider';
 import { useState } from 'react';
@@ -152,7 +152,7 @@ export default function FrigorificoPage() {
             )}
 
             {/* Panel principal del frigorífico */}
-            <FrigorificoPanel />
+            <FrigorificoDashboard />
           </div>
         )}
 

@@ -1,8 +1,9 @@
-// src/components/productor/BatchManagement.tsx - VERSIÓN COMPLETADA Y CORREGIDA
+// src/components/productor/BatchManagement.tsx - VERSIÓN COMPLETA CORREGIDA
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useStarknet } from '@/providers/starknet-provider';
+import { cacheService } from '@/services/CacheService';
 
 // ✅ Interfaz mejorada para el estado del lote
 interface BatchInfo {
@@ -16,6 +17,9 @@ interface BatchInfo {
   cantidad_animales: number;
   peso_total: bigint;
   animal_ids: bigint[];
+  // ✅ Nuevos campos para mejor visualización
+  peso_calculado?: bigint;
+  estado_detalle?: string;
 }
 
 export function BatchManagement() {
@@ -37,12 +41,158 @@ export function BatchManagement() {
   const [availableFrigorificos, setAvailableFrigorificos] = useState<string[]>([]);
   const [isLoadingFrigorificos, setIsLoadingFrigorificos] = useState(false);
 
+  // ✅ Estados para el cache
+  const [cacheAvailable, setCacheAvailable] = useState<boolean>(false);
+  const [cacheAnimals, setCacheAnimals] = useState<any[]>([]);
+  const [cacheBatches, setCacheBatches] = useState<any[]>([]);
+
+  // ✅ Función para verificar estado del cache
+  const checkCacheHealth = async () => {
+    try {
+      const health = await cacheService.healthCheck();
+      const isHealthy = health && health.status === 'healthy';
+      setCacheAvailable(isHealthy);
+      return isHealthy;
+    } catch (error) {
+      setCacheAvailable(false);
+      return false;
+    }
+  };
+
+  // ✅ FUNCIÓN PARA CALCULAR PESO TOTAL DE ANIMALES EN LOTE
+  const calculateBatchWeight = async (animalIds: bigint[]): Promise<bigint> => {
+    if (!contractService || animalIds.length === 0) return BigInt(0);
+    
+    try {
+      let totalWeight = BigInt(0);
+      let animalsWithWeight = 0;
+      
+      for (const animalId of animalIds) {
+        try {
+          const animalData = await contractService.getAnimalData(animalId);
+          // Buscar el peso en diferentes campos posibles
+          const peso = animalData.peso || animalData.peso_inicial || animalData.pesoTotal || BigInt(0);
+          
+          if (peso > BigInt(0)) {
+            totalWeight += BigInt(peso);
+            animalsWithWeight++;
+          }
+        } catch (error) {
+          console.log(`❌ Error obteniendo peso del animal ${animalId}:`, error);
+        }
+      }
+      
+      console.log(`⚖️ Peso calculado para ${animalIds.length} animales: ${totalWeight} kg (${animalsWithWeight} con peso)`);
+      return totalWeight;
+    } catch (error) {
+      console.error('❌ Error calculando peso del lote:', error);
+      return BigInt(0);
+    }
+  };
+
+  // ✅ Cargar animales desde el cache
+  const loadAnimalsFromCache = async () => {
+    if (!address) return;
+    
+    try {
+      console.log('🔄 Cargando animales desde cache...');
+      const isHealthy = await checkCacheHealth();
+      if (!isHealthy) {
+        console.log('❌ Cache no disponible, usando solo blockchain');
+        return;
+      }
+
+      const animalsData = await cacheService.getAnimalsByOwner(address);
+      console.log('🐄 Animales desde cache:', animalsData);
+      
+      if (Array.isArray(animalsData) && animalsData.length > 0) {
+        setCacheAnimals(animalsData);
+        
+        // Extraer IDs de animales disponibles (sin lote)
+        const availableFromCache = animalsData
+          .filter((animal: any) => 
+            !animal.lote_id && 
+            !animal.batch_id && 
+            animal.estado === 'activo'
+          )
+          .map((animal: any) => BigInt(animal.id));
+        
+        console.log(`✅ ${availableFromCache.length} animales disponibles desde cache`);
+        
+        // Combinar con animales de blockchain (evitar duplicados)
+        const combinedAnimals = [...new Set([...availableAnimals, ...availableFromCache])];
+        setAvailableAnimals(combinedAnimals);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando animales desde cache:', error);
+    }
+  };
+
+  // ✅ Cargar lotes desde el cache
+  const loadBatchesFromCache = async () => {
+    if (!address) return;
+    
+    try {
+      console.log('🔄 Cargando lotes desde cache...');
+      const isHealthy = await checkCacheHealth();
+      if (!isHealthy) {
+        console.log('❌ Cache no disponible, usando solo blockchain');
+        return;
+      }
+
+      const allBatches = await cacheService.getAllBatches();
+      console.log('📦 Lotes desde cache:', allBatches);
+      
+      if (Array.isArray(allBatches) && allBatches.length > 0) {
+        // Filtrar lotes del propietario actual
+        const myBatches = allBatches.filter((batch: any) => 
+          batch.propietario?.toLowerCase() === address.toLowerCase()
+        );
+        
+        setCacheBatches(myBatches);
+        console.log(`✅ ${myBatches.length} lotes desde cache para ${address}`);
+        
+        // Convertir a formato BatchInfo
+        const cacheBatchInfo: BatchInfo[] = myBatches.map((batch: any) => ({
+          id: BigInt(batch.id || batch.batch_id || 0),
+          propietario: batch.propietario || address,
+          frigorifico: batch.frigorifico || '0x0',
+          fecha_creacion: BigInt(batch.fecha_creacion || batch.fechaCreacion || 0),
+          fecha_transferencia: BigInt(batch.fecha_transferencia || 0),
+          fecha_procesamiento: BigInt(batch.fecha_procesamiento || 0),
+          estado: batch.estado === 'transferido' ? 1 : 0,
+          cantidad_animales: batch.cantidad_animales || batch.animal_count || 0,
+          peso_total: BigInt(batch.peso_total || batch.pesoTotal || 0),
+          animal_ids: (batch.animal_ids || batch.animals || []).map((id: any) => BigInt(id)),
+          estado_detalle: getEstadoDetalle(batch.estado)
+        }));
+
+        // Combinar con lotes de blockchain
+        const combinedBatches = [...batches, ...cacheBatchInfo];
+        
+        // Eliminar duplicados por ID
+        const uniqueBatches = combinedBatches.filter((batch, index, self) =>
+          index === self.findIndex(b => b.id.toString() === batch.id.toString())
+        );
+        
+        setBatches(uniqueBatches);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando lotes desde cache:', error);
+    }
+  };
+
   // ✅ Función optimizada para cargar animales disponibles
   const loadAvailableAnimals = async () => {
     if (!contractService || !address) return;
     
     try {
       console.log('🔄 Cargando animales disponibles...');
+      
+      // Primero cargar desde cache
+      await loadAnimalsFromCache();
+      
+      // Luego cargar desde blockchain
       const allAnimals = await contractService.getAnimalsByProducer(address);
       const available: bigint[] = [];
       const processedAnimals = new Set<string>();
@@ -64,8 +214,11 @@ export function BatchManagement() {
         }
       }
       
-      setAvailableAnimals(available);
-      console.log(`✅ ${available.length} animales disponibles de ${allAnimals.length} totales`);
+      // Combinar con animales del cache
+      const combinedAvailable = [...new Set([...availableAnimals, ...available])];
+      setAvailableAnimals(combinedAvailable);
+      
+      console.log(`✅ ${combinedAvailable.length} animales disponibles (${available.length} desde blockchain + ${availableAnimals.length} desde cache)`);
     } catch (error) {
       console.error('Error cargando animales disponibles:', error);
     }
@@ -113,11 +266,39 @@ export function BatchManagement() {
     }
   };
 
-  // ✅ Función corregida para cargar lotes sin duplicados
+  // ✅ Función para obtener el estado detallado del lote
+  const getEstadoDetalle = (estado: number): string => {
+    switch (estado) {
+      case 0: return '🟢 Activo - Listo para transferir';
+      case 1: return '🟡 Transferido - Pendiente de pago';
+      case 2: return '🔵 Pagado - En procesamiento';
+      case 3: return '🟣 Procesado - Certificado';
+      case 4: return '⚪ Exportado';
+      default: return '⚫ Estado desconocido';
+    }
+  };
+
+  // ✅ Función para obtener el color del estado
+  const getEstadoColor = (estado: number) => {
+    switch (estado) {
+      case 0: return 'bg-green-100 text-green-800 border-green-200';
+      case 1: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 2: return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 3: return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 4: return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // ✅ Función corregida para cargar lotes sin duplicados CON PESOS
   const loadBatches = async () => {
     if (!contractService || !address) return;
     
     try {
+      // Primero cargar desde cache
+      await loadBatchesFromCache();
+      
+      // Luego cargar desde blockchain
       const batchIds = await contractService.getBatchesByProducer(address);
       console.log('📦 IDs de lotes encontrados:', batchIds);
       
@@ -173,24 +354,38 @@ export function BatchManagement() {
             ).map((id: unknown) => BigInt(id as string));
             animalIdsInBatch = uniqueFromInfo;
           }
+
+          // ✅ CALCULAR PESO TOTAL DEL LOTE
+          const pesoCalculado = await calculateBatchWeight(animalIdsInBatch);
+          const pesoFinal = pesoCalculado > BigInt(0) ? pesoCalculado : batchInfo.peso_total;
                     
           batchDetails.push({
             id: batchId,
             ...batchInfo,
             animal_ids: animalIdsInBatch,
-            cantidad_animales: animalIdsInBatch.length
+            cantidad_animales: animalIdsInBatch.length,
+            peso_total: pesoFinal,
+            peso_calculado: pesoCalculado,
+            estado_detalle: getEstadoDetalle(batchInfo.estado)
           });
           
-          console.log(`✅ Lote ${batchId} cargado con ${animalIdsInBatch.length} animales`);
+          console.log(`✅ Lote ${batchId} cargado con ${animalIdsInBatch.length} animales, peso: ${pesoFinal} kg`);
         } catch (batchError: any) {
           console.error(`❌ Error cargando lote ${batchId}:`, batchError);
         }
       }
       
+      // ✅ Combinar con lotes del cache y eliminar duplicados
+      const allBatches = [...batches, ...batchDetails];
+      const uniqueBatches = allBatches.filter((batch, index, self) =>
+        index === self.findIndex(b => b.id.toString() === batch.id.toString())
+      );
+      
       // ✅ Ordenar por ID para consistencia
-      batchDetails.sort((a: BatchInfo, b: BatchInfo) => Number(a.id - b.id));
-      setBatches(batchDetails);
-      console.log(`✅ ${batchDetails.length} lotes únicos cargados exitosamente`);
+      uniqueBatches.sort((a: BatchInfo, b: BatchInfo) => Number(b.id - a.id)); // Más recientes primero
+      setBatches(uniqueBatches);
+      
+      console.log(`✅ ${uniqueBatches.length} lotes únicos cargados (${batchDetails.length} desde blockchain + ${batches.length} desde cache)`);
       
     } catch (error: any) {
       console.error('❌ Error cargando lotes:', error);
@@ -256,11 +451,88 @@ export function BatchManagement() {
     }
   };
 
+  // ✅ Función para guardar lote en cache - CORREGIDA
+  const saveBatchToCache = async (batchData: any) => {
+    try {
+      const isHealthy = await checkCacheHealth();
+      if (!isHealthy) {
+        console.log('❌ Cache no disponible, omitiendo guardado');
+        return;
+      }
+
+      console.log('💾 Guardando lote en cache:', batchData);
+      
+      // ✅ Crear objeto con tipos explícitos
+      const transaccionData: {
+        hash: string;
+        tipo: string;
+        from: string;
+        to: string;
+        data: any;
+        estado: 'completada';
+        timestamp: number;
+      } = {
+        hash: `batch-create-${batchData.id}-${Date.now()}`,
+        tipo: 'batch_created',
+        from: batchData.propietario || address || '0x0',
+        to: 'cache_system',
+        data: batchData,
+        estado: 'completada',
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      const result = await cacheService.guardarTransaccion(transaccionData);
+      
+      if (result.success) {
+        console.log('✅ Lote guardado en cache exitosamente');
+      } else {
+        console.warn('⚠️ No se pudo guardar lote en cache:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Error guardando lote en cache:', error);
+    }
+  };
+
+  // ✅ Función para guardar transferencia en cache - CORREGIDA
+  const saveTransferToCache = async (transferData: any) => {
+    try {
+      const isHealthy = await checkCacheHealth();
+      if (!isHealthy) return;
+
+      console.log('💾 Guardando transferencia en cache:', transferData);
+      
+      // ✅ Crear objeto con tipos explícitos
+      const transaccionData: {
+        hash: string;
+        tipo: string;
+        from: string;
+        to: string;
+        data: any;
+        estado: 'completada';
+        timestamp: number;
+      } = {
+        hash: `batch-transfer-${transferData.batchId}-${Date.now()}`,
+        tipo: 'batch_transferred',
+        from: transferData.from,
+        to: transferData.to,
+        data: transferData,
+        estado: 'completada',
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      await cacheService.guardarTransaccion(transaccionData);
+      console.log('✅ Transferencia guardada en cache');
+    } catch (error) {
+      console.error('❌ Error guardando transferencia en cache:', error);
+    }
+  };
+
   useEffect(() => {
     if (contractService && address) {
       loadBatches();
       loadAvailableAnimals();
       loadFrigorificos();
+      checkCacheHealth();
     }
   }, [contractService, address]);
 
@@ -302,11 +574,29 @@ export function BatchManagement() {
       
       await contractService.waitForTransaction(result.txHash);
       
+      // ✅ CALCULAR PESO DEL NUEVO LOTE
+      const pesoCalculado = await calculateBatchWeight(verification.available);
+      
+      // ✅ Guardar en cache
+      const batchData = {
+        id: result.batchId.toString(),
+        propietario: address,
+        frigorifico: '0x0',
+        fecha_creacion: Math.floor(Date.now() / 1000),
+        estado: 'activo',
+        cantidad_animales: verification.available.length,
+        animal_ids: verification.available.map(id => id.toString()),
+        peso_total: pesoCalculado.toString(),
+        peso_calculado: pesoCalculado.toString()
+      };
+      
+      await saveBatchToCache(batchData);
+      
       await loadBatches();
       await loadAvailableAnimals();
       
       setAnimalIds('');
-      alert(`✅ Lote #${result.batchId} creado exitosamente! Listo para transferir cuando lo decidas.`);
+      alert(`✅ Lote #${result.batchId} creado exitosamente! Peso total: ${pesoCalculado} kg`);
       
     } catch (error: any) {
       console.error('❌ Error creando lote:', error);
@@ -397,6 +687,18 @@ export function BatchManagement() {
       
       console.log('✅ Transferencia confirmada en blockchain');
 
+      // ✅ Guardar transferencia en cache
+      const transferData = {
+        batchId: batchId.toString(),
+        from: address,
+        to: frigorifico,
+        animalCount: batchInfo.animal_ids.length,
+        pesoTotal: batchInfo.peso_total?.toString() || '0',
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+      
+      await saveTransferToCache(transferData);
+      
       await loadBatches();
       await loadAvailableAnimals();
       
@@ -486,6 +788,17 @@ export function BatchManagement() {
     setTransferStep('select');
   };
 
+  // ✅ Filtrar lotes por estado
+  const getBatchesByEstado = (estado: number) => {
+    return batches.filter(batch => batch.estado === estado);
+  };
+
+  // ✅ Calcular estadísticas
+  const totalPeso = batches.reduce((total, batch) => total + Number(batch.peso_total || 0), 0);
+  const lotesActivos = getBatchesByEstado(0).length;
+  const lotesTransferidos = getBatchesByEstado(1).length;
+  const lotesProcesados = batches.filter(batch => batch.estado >= 2).length;
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg">
       <div className="flex justify-between items-center mb-6">
@@ -510,6 +823,34 @@ export function BatchManagement() {
             <span>🔄</span>
             Lotes
           </button>
+        </div>
+      </div>
+
+      {/* Estado del Cache */}
+      <div className={`border rounded-xl p-4 mb-6 ${
+        cacheAvailable ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+      }`}>
+        <h4 className="font-semibold mb-2 flex items-center gap-2 ${
+          cacheAvailable ? 'text-green-800' : 'text-yellow-800'
+        }">
+          <span className={cacheAvailable ? 'text-green-500' : 'text-yellow-500'}>
+            {cacheAvailable ? '💾' : '⚠️'}
+          </span>
+          {cacheAvailable ? 'Cache Conectado' : 'Cache No Disponible'}
+        </h4>
+        <div className={`text-sm space-y-1 ${
+          cacheAvailable ? 'text-green-700' : 'text-yellow-700'
+        }`}>
+          {cacheAvailable ? (
+            <>
+              <p><strong>Animales en cache:</strong> {cacheAnimals.length}</p>
+              <p><strong>Lotes en cache:</strong> {cacheBatches.length}</p>
+              <p><strong>Animales disponibles:</strong> {availableAnimals.length}</p>
+              <p className="text-xs mt-2">✅ Usando datos combinados de blockchain y cache</p>
+            </>
+          ) : (
+            <p>Usando solo datos de blockchain. Algunas funciones pueden ser más lentas.</p>
+          )}
         </div>
       </div>
 
@@ -558,6 +899,12 @@ export function BatchManagement() {
                       <span className="text-gray-600">Animales:</span>
                       <span className="font-semibold ml-2">
                         {batches.find(b => b.id.toString() === selectedBatch)?.animal_ids.length || 0}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Peso Total:</span>
+                      <span className="font-semibold ml-2">
+                        {batches.find(b => b.id.toString() === selectedBatch)?.peso_total?.toString() || '0'} kg
                       </span>
                     </div>
                     <div className="col-span-2">
@@ -643,6 +990,12 @@ export function BatchManagement() {
                           <span>Animales:</span>
                           <span className="font-semibold">
                             {batches.find(b => b.id.toString() === selectedBatch)?.animal_ids.length || 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Peso Total:</span>
+                          <span className="font-semibold">
+                            {batches.find(b => b.id.toString() === selectedBatch)?.peso_total?.toString() || '0'} kg
                           </span>
                         </div>
                       </>
@@ -892,13 +1245,34 @@ export function BatchManagement() {
         </div>
       </div>
 
-      {/* Lista de Lotes */}
+      {/* Estadísticas de Lotes */}
+      <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-green-700">{batches.length}</div>
+          <div className="text-sm text-green-600">Total Lotes</div>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-blue-700">{lotesActivos}</div>
+          <div className="text-sm text-blue-600">Lotes Activos</div>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-yellow-700">{lotesTransferidos}</div>
+          <div className="text-sm text-yellow-600">Pendientes de Pago</div>
+        </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-purple-700">{totalPeso}</div>
+          <div className="text-sm text-purple-600">Kg Totales</div>
+        </div>
+      </div>
+
+      {/* Lista de Lotes CON PESTAÑAS */}
       <div className="mt-8">
         <div className="flex justify-between items-center mb-4">
           <h4 className="font-semibold text-gray-700 text-lg">Mis Lotes</h4>
           <span className="text-sm text-gray-500">
             {batches.length} lote{batches.length !== 1 ? 's' : ''} •{' '}
-            {batches.reduce((total, batch) => total + (batch.animal_ids?.length || 0), 0)} animales en lotes
+            {batches.reduce((total, batch) => total + (batch.animal_ids?.length || 0), 0)} animales •{' '}
+            {totalPeso} kg totales
           </span>
         </div>
         
@@ -915,98 +1289,187 @@ export function BatchManagement() {
           </div>
         ) : (
           <div className="space-y-4">
-            {batches.map((batch) => (
-              <div 
-                key={`batch-${batch.id.toString()}`}
-                className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h5 className="font-semibold text-lg">Lote #{batch.id.toString()}</h5>
-                    <p className="text-sm text-gray-600">
-                      📅 Creado: {formatDate(batch.fecha_creacion)}
-                      {batch.fecha_transferencia > BigInt(0) && (
-                        <span className="ml-4">
-                          📤 Transferido: {formatDate(batch.fecha_transferencia)}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      batch.estado === 0 ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {batch.estado === 0 ? '🟢 Activo' : '📤 Transferido'}
-                    </span>
-                  </div>
+            {/* ✅ LOTES ACTIVOS (Estado 0) */}
+            {getBatchesByEstado(0).length > 0 && (
+              <div>
+                <h5 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
+                  <span>🟢</span>
+                  Lotes Activos - Listos para Transferir ({getBatchesByEstado(0).length})
+                </h5>
+                <div className="space-y-4">
+                  {getBatchesByEstado(0).map((batch) => (
+                    <BatchCard key={batch.id.toString()} batch={batch} onTransfer={startTransferProcess} isLoading={isLoading} />
+                  ))}
                 </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
-                  <div>
-                    <span className="font-medium">Animales:</span> {batch.animal_ids?.length || 0}
-                  </div>
-                  <div>
-                    <span className="font-medium">Peso Total:</span> {batch.peso_total?.toString() || '0'} kg
-                  </div>
-                  <div>
-                    <span className="font-medium">Propietario:</span> {batch.propietario?.slice(0, 8)}...
-                  </div>
-                  <div>
-                    <span className="font-medium">Frigorífico:</span> {batch.frigorifico && batch.frigorifico !== '0x0' ? `${batch.frigorifico.slice(0, 8)}...` : 'No asignado'}
-                  </div>
-                </div>
-
-                {batch.animal_ids && batch.animal_ids.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm font-medium text-gray-700 mb-1">
-                      🐄 Animales en lote ({batch.animal_ids.length}):
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {batch.animal_ids.slice(0, 8).map((animalId: bigint, index: number) => (
-                        <span 
-                          key={`animal-${animalId.toString()}-in-batch-${batch.id.toString()}-${index}`}
-                          className="bg-gray-100 px-2 py-1 rounded text-xs border"
-                        >
-                          #{animalId.toString()}
-                        </span>
-                      ))}
-                      {batch.animal_ids.length > 8 && (
-                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                          +{batch.animal_ids.length - 8} más
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ✅ Botón de transferencia SOLO para lotes activos */}
-                {batch.estado === 0 && batch.animal_ids && batch.animal_ids.length > 0 && (
-                  <div className="mt-4 flex gap-2 items-center">
-                    <button
-                      onClick={() => startTransferProcess('batch', undefined, batch.id.toString())}
-                      disabled={isLoading}
-                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-green-600 text-white rounded-lg hover:from-blue-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 transition-colors text-sm flex items-center gap-2 font-semibold"
-                    >
-                      🏭 Transferir a Frigorífico
-                    </button>
-                    <span className="text-xs text-gray-500">
-                      {batch.animal_ids.length} animales
-                    </span>
-                  </div>
-                )}
-
-                {batch.estado !== 0 && (
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-700 text-sm text-center">
-                      ✅ Transferido - Esperando procesamiento
-                    </p>
-                  </div>
-                )}
               </div>
-            ))}
+            )}
+
+            {/* ✅ LOTES TRANSFERIDOS PENDIENTES (Estado 1) */}
+            {getBatchesByEstado(1).length > 0 && (
+              <div>
+                <h5 className="font-semibold text-yellow-700 mb-3 flex items-center gap-2">
+                  <span>🟡</span>
+                  Lotes Transferidos - Pendientes de Pago ({getBatchesByEstado(1).length})
+                </h5>
+                <div className="space-y-4">
+                  {getBatchesByEstado(1).map((batch) => (
+                    <BatchCard key={batch.id.toString()} batch={batch} onTransfer={startTransferProcess} isLoading={isLoading} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ✅ LOTES PROCESADOS (Estado 2+) */}
+            {lotesProcesados > 0 && (
+              <div>
+                <h5 className="font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                  <span>🔵</span>
+                  Lotes Procesados ({lotesProcesados})
+                </h5>
+                <div className="space-y-4">
+                  {batches.filter(batch => batch.estado >= 2).map((batch) => (
+                    <BatchCard key={batch.id.toString()} batch={batch} onTransfer={startTransferProcess} isLoading={isLoading} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   );
 }
+
+// ✅ Componente de Tarjeta de Lote Separado
+const BatchCard = ({ batch, onTransfer, isLoading }: { 
+  batch: BatchInfo; 
+  onTransfer: (type: 'batch', animalId: undefined, batchId: string) => void;
+  isLoading: boolean;
+}) => {
+  return (
+    <div className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h5 className="font-semibold text-lg">Lote #{batch.id.toString()}</h5>
+          <p className="text-sm text-gray-600">
+            📅 Creado: {formatDate(batch.fecha_creacion)}
+            {batch.fecha_transferencia > BigInt(0) && (
+              <span className="ml-4">
+                📤 Transferido: {formatDate(batch.fecha_transferencia)}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="text-right">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getEstadoColor(batch.estado)}`}>
+            {batch.estado_detalle}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
+        <div>
+          <span className="font-medium">Animales:</span> {batch.animal_ids?.length || 0}
+        </div>
+        <div>
+          <span className="font-medium">Peso Total:</span> {batch.peso_total?.toString() || '0'} kg
+        </div>
+        <div>
+          <span className="font-medium">Propietario:</span> {batch.propietario?.slice(0, 8)}...
+        </div>
+        <div>
+          <span className="font-medium">Frigorífico:</span> {batch.frigorifico && batch.frigorifico !== '0x0' ? `${batch.frigorifico.slice(0, 8)}...` : 'No asignado'}
+        </div>
+      </div>
+
+      {batch.animal_ids && batch.animal_ids.length > 0 && (
+        <div className="mt-3">
+          <p className="text-sm font-medium text-gray-700 mb-1">
+            🐄 Animales en lote ({batch.animal_ids.length}):
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {batch.animal_ids.slice(0, 8).map((animalId: bigint, index: number) => (
+              <span 
+                key={`animal-${animalId.toString()}-in-batch-${batch.id.toString()}-${index}`}
+                className="bg-gray-100 px-2 py-1 rounded text-xs border"
+              >
+                #{animalId.toString()}
+              </span>
+            ))}
+            {batch.animal_ids.length > 8 && (
+              <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                +{batch.animal_ids.length - 8} más
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Botón de transferencia SOLO para lotes activos */}
+      {batch.estado === 0 && batch.animal_ids && batch.animal_ids.length > 0 && (
+        <div className="mt-4 flex gap-2 items-center">
+          <button
+            onClick={() => onTransfer('batch', undefined, batch.id.toString())}
+            disabled={isLoading}
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-green-600 text-white rounded-lg hover:from-blue-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 transition-colors text-sm flex items-center gap-2 font-semibold"
+          >
+            🏭 Transferir a Frigorífico
+          </button>
+          <span className="text-xs text-gray-500">
+            {batch.animal_ids.length} animales • {batch.peso_total?.toString() || '0'} kg
+          </span>
+        </div>
+      )}
+
+      {batch.estado === 1 && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-700 text-sm text-center">
+            ⏳ Transferido - Esperando pago y procesamiento del frigorífico
+          </p>
+          {batch.frigorifico && batch.frigorifico !== '0x0' && (
+            <p className="text-yellow-600 text-xs text-center mt-1">
+              Frigorífico: {batch.frigorifico.slice(0, 10)}...{batch.frigorifico.slice(-8)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {batch.estado >= 2 && (
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-green-700 text-sm text-center">
+            ✅ Procesado - Lote completado
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ✅ Función para obtener el color del estado (fuera del componente principal)
+const getEstadoColor = (estado: number) => {
+  switch (estado) {
+    case 0: return 'bg-green-100 text-green-800 border-green-200';
+    case 1: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 2: return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 3: return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 4: return 'bg-gray-100 text-gray-800 border-gray-200';
+    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+// ✅ Función auxiliar para formatear fecha (fuera del componente principal)
+const formatDate = (timestamp: bigint): string => {
+  if (!timestamp || timestamp === BigInt(0)) {
+    return 'No disponible';
+  }
+  
+  try {
+    const date = new Date(Number(timestamp) * 1000);
+    if (date.getFullYear() < 2020) {
+      return 'No disponible';
+    }
+    return date.toLocaleDateString('es-ES');
+  } catch {
+    return 'No disponible';
+  }
+};

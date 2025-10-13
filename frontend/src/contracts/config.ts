@@ -317,3 +317,4 @@ export default {
   getRoleName,
   getProjectWalletDisplayName
 };
+

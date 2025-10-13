@@ -1,17 +1,18 @@
-// src/services/animalContractService.ts - VERSIÓN COMPLETA CON TODAS LAS FUNCIONES
+// src/services/animalContractService.ts - VERSIÓN COMPLETA Y CORREGIDA
 import { RazaAnimal, EstadoAnimal, TipoCorte, CONTRACT_FUNCTIONS, ROLES, ROLE_DISPLAY_NAMES  } from '@/contracts/config';
-import { ChipyPayService } from './chipypay-service';
+import { chipyPayService } from './chipypay-service'; // ✅ Importar la instancia singleton
 import { CHIPYPAY_CONFIG, TransferPayment } from '@/contracts/chipypay-config';
-
 export class AnimalContractService {
   private wallet: any;
   private contractAddress: string;
-  private chipyPay: ChipyPayService;
+  private chipyPay: typeof chipyPayService;
 
   constructor(wallet: any) {
     this.wallet = wallet;
     this.contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
-    this.chipyPay = new ChipyPayService(wallet);
+    
+    // ✅ USAR la instancia singleton en lugar de crear una nueva
+    this.chipyPay = chipyPayService;
     
     if (wallet) {
       console.log('🔍 Wallet inicializada en AnimalContractService:', {
@@ -238,8 +239,6 @@ export class AnimalContractService {
   }
 
   // ✅ FUNCIÓN CORREGIDA: Crear lote filtrando animales problemáticos
-// ✅ FUNCIÓN CORREGIDA para create_animal_batch
-// ✅ FUNCIÓN COMPLETAMENTE CORREGIDA - Estructura Cairo correcta
   async createAnimalBatchSafe(animalIds: bigint[]): Promise<{ batchId: bigint; txHash: string }> {
     try {
       console.log(`📦 [CORREGIDO] Creando lote con animales:`, animalIds.map(id => id.toString()));
@@ -253,8 +252,6 @@ export class AnimalContractService {
       console.log(`✅ Animales verificados:`, verification.available.map(id => id.toString()));
 
       // ✅ FORMA CORRECTA para Cairo - Solo el array de animal_ids
-      // El contrato espera: (animal_ids: Array<u128>)
-      // Pero en calldata se envía como: [longitud, ...elementos]
       const animalIdsStr = verification.available.map(id => id.toString());
       
       const calldata = [
@@ -291,6 +288,7 @@ export class AnimalContractService {
       throw new Error(`Error creando lote: ${error.message}`);
     }
   }
+
   // ============ FUNCIONES DE CONSULTA COMPATIBILIDAD ============
 
   async getAnimalsByOwner(ownerAddress: string): Promise<any[]> {
@@ -352,9 +350,7 @@ export class AnimalContractService {
     }
   }
 
-// ✅ FUNCIÓN CORREGIDA para add_animals_to_batch
-// ✅ FUNCIÓN COMPLETAMENTE CORREGIDA para add_animals_to_batch
-// ✅ FUNCIÓN CORREGIDA para add_animals_to_batch - Estructura diferente
+  // ✅ FUNCIÓN CORREGIDA para add_animals_to_batch
   async addAnimalsToBatch(batchId: bigint, animalIds: bigint[]): Promise<string> {
     try {
       console.log(`➕ [ADD CORREGIDO] Agregando ${animalIds.length} animales al lote #${batchId}`);
@@ -369,8 +365,6 @@ export class AnimalContractService {
       console.log('✅ Animales disponibles verificados:', verification.available.map(id => id.toString()));
 
       // ✅ ESTRUCTURA CORRECTA para add_animals_to_batch
-      // El contrato espera: (batch_id: u128, animal_ids: Array<u128>)
-      // En calldata: [batch_id, longitud_array, ...elementos_array]
       const calldata = [
         batchId.toString(),                    // batch_id (u128)
         verification.available.length.toString(), // length del array (u128)
@@ -399,68 +393,77 @@ export class AnimalContractService {
     }
   }
 
-  // ✅ FUNCIÓN DE DIAGNÓSTICO DE ANIMALES DISPONIBLES
-/*   const diagnoseAvailableAnimals = async () => {
-    if (!contractService || !address) return;
-    
-    try {
-      console.log(`🔍 [DIAGNÓSTICO] Verificando animales disponibles para ${address}`);
-      
-      // 1. Obtener todos los animales del productor
-      const allAnimals = await contractService.getAnimalsByProducer(address);
-      console.log(`📊 [DIAGNÓSTICO] Todos mis animales:`, allAnimals.map(a => a.toString()));
-      
-      // 2. Verificar cada animal individualmente
-      const availableAnimals: bigint[] = [];
-      const unavailableAnimals: {id: bigint, reason: string}[] = [];
-      
-      for (const animalId of allAnimals) {
-        try {
-          const animalData = await contractService.getAnimalData(animalId);
-          const batchId = await contractService.getBatchForAnimal(animalId);
-          
-          console.log(`🐄 [DIAGNÓSTICO] Animal #${animalId}:`, {
-            propietario: animalData.propietario,
-            estado: animalData.estado,
-            lote_id: animalData.lote_id,
-            batchId_from_function: batchId.toString(),
-            es_mio: animalData.propietario === address,
-            estado_activo: animalData.estado === 0,
-            sin_lote: batchId === BigInt(0) && animalData.lote_id === 0
-          });
-          
-          if (animalData.propietario !== address) {
-            unavailableAnimals.push({id: animalId, reason: 'No es propietario'});
-          } else if (animalData.estado !== 0) {
-            unavailableAnimals.push({id: animalId, reason: `Estado ${animalData.estado}`});
-          } else if (batchId !== BigInt(0) || animalData.lote_id !== 0) {
-            unavailableAnimals.push({id: animalId, reason: `En lote ${batchId || animalData.lote_id}`});
-          } else {
-            availableAnimals.push(animalId);
-          }
-          
-        } catch (error) {
-          console.log(`❌ [DIAGNÓSTICO] Error con animal #${animalId}:`, error);
-          unavailableAnimals.push({id: animalId, reason: 'Error al verificar'});
-        }
-      }
-      
-      console.log(`✅ [DIAGNÓSTICO] RESULTADO:`);
-      console.log(`   🟢 Disponibles:`, availableAnimals.map(a => a.toString()));
-      console.log(`   🔴 No disponibles:`, unavailableAnimals);
-      
-      return { availableAnimals, unavailableAnimals };s
-      
-    } catch (error) {
-      console.error('❌ Error en diagnóstico:', error);
-      return { availableAnimals: [], unavailableAnimals: [] };
-    }
-  }; */
-
-  // Llamar esta función para debuggear:
-  // await diagnoseAvailableAnimals();
-
   // ============ FUNCIONES DE CONSULTA MEJORADAS ============
+
+  // Agrega esta función al AnimalContractService:
+
+/**
+ * ✅ NUEVA FUNCIÓN: Obtener lotes por frigorífico
+ */
+async getBatchesByFrigorifico(frigorificoAddress: string): Promise<bigint[]> {
+  try {
+    console.log(`🔍 Obteniendo lotes para frigorífico: ${frigorificoAddress}`);
+    
+    // Usar getBatchesByProducer como base y filtrar por frigorífico
+    const allBatches = await this.getBatchesByProducer(frigorificoAddress);
+    const frigorificoBatches: bigint[] = [];
+    
+    for (const batchId of allBatches) {
+      try {
+        const batchInfo = await this.getBatchInfo(batchId);
+        if (batchInfo.frigorifico?.toLowerCase() === frigorificoAddress.toLowerCase()) {
+          frigorificoBatches.push(batchId);
+        }
+      } catch (error) {
+        console.log(`Error verificando lote ${batchId}:`, error);
+      }
+    }
+    
+    console.log(`✅ ${frigorificoBatches.length} lotes encontrados para frigorífico`);
+    return frigorificoBatches;
+    
+  } catch (error: any) {
+    console.error('❌ Error obteniendo lotes por frigorífico:', error);
+    return [];
+  }
+}
+
+/**
+ * ✅ FUNCIÓN ALTERNATIVA: Obtener todos los lotes del sistema (escaneo)
+ */
+async getAllBatches(): Promise<bigint[]> {
+  try {
+    console.log('🔍 [ALTERNATIVA] Obteniendo TODOS los lotes escaneando blockchain...');
+    
+    const allBatches: bigint[] = [];
+    const stats = await this.getSystemStats();
+    const totalBatches = Number(stats.total_batches_created || 0);
+    
+    console.log(`📊 Revisando ${totalBatches} lotes en el sistema...`);
+    
+    for (let i = 1; i <= totalBatches; i++) {
+      try {
+        const batchId = BigInt(i);
+        const batchInfo = await this.getBatchInfo(batchId);
+        
+        // Si el lote existe (tiene propietario válido), agregarlo
+        if (batchInfo && batchInfo.propietario !== '0x0') {
+          allBatches.push(batchId);
+        }
+      } catch (error) {
+        // Lote no existe o error, continuar
+        console.log(`Lote #${i} no disponible`);
+      }
+    }
+    
+    console.log(`✅ [ALTERNATIVA] ${allBatches.length} lotes encontrados`);
+    return allBatches;
+    
+  } catch (error: any) {
+    console.error('❌ Error obteniendo todos los lotes:', error);
+    return [];
+  }
+}
 
   async getBatchInfo(batchId: bigint): Promise<any> {
     try {
@@ -553,7 +556,7 @@ export class AnimalContractService {
     }
   }
 
-    async verifyBatchState(batchId: bigint): Promise<void> {
+  async verifyBatchState(batchId: bigint): Promise<void> {
     try {
       console.log(`🔍 [VERIFICACIÓN] Estado real del lote #${batchId}`);
       
@@ -653,7 +656,7 @@ export class AnimalContractService {
     }
   }
 
-// ✅ Obtener frigoríficos desde los roles del contrato
+  // ✅ Obtener frigoríficos desde los roles del contrato
   async getFrigorificosFromRoles(): Promise<string[]> {
     try {
       console.log('🔍 Obteniendo frigoríficos desde roles...');
@@ -686,7 +689,6 @@ export class AnimalContractService {
     }
   }
 
-
   async investigateAnimal1(): Promise<void> {
     try {
       console.log(`🔍 [INVESTIGACIÓN] Analizando el animal #1...`);
@@ -717,7 +719,6 @@ export class AnimalContractService {
       console.error(`❌ Error en investigación:`, error);
     }
   }
-
 
   async getBatchForAnimal(animalId: bigint): Promise<bigint> {
     try {
@@ -999,35 +1000,150 @@ export class AnimalContractService {
     }
   }
 
-  async hasRole(role: string, account: string): Promise<boolean> {
-    try {
-      const result = await this.callContract('has_role', [role, account]);
-      return result[0] === '0x1' || result[0] === '1';
-    } catch (error: any) {
-      console.error('❌ Error verificando rol:', error);
-      return false;
-    }
-  }
 
-  async getRoleMemberCount(role: string): Promise<number> {
-    try {
-      const result = await this.callContract('get_role_member_count', [role]);
-      return Number(result[0] || '0');
-    } catch (error: any) {
-      console.error('❌ Error obteniendo cantidad de miembros del rol:', error);
+// En AnimalContractService - CORREGIR FUNCIONES DE ROLES
+
+/**
+ * ✅ CORREGIDO: Obtener cantidad de miembros de un rol
+ */
+async getRoleMemberCount(role: string): Promise<number> {
+  try {
+    console.log(`🔍 [ROLES] Obteniendo cantidad de miembros para rol: ${role}`);
+    
+    // ✅ Asegurar que el rol no sea undefined
+    if (!role || role === 'undefined') {
+      console.error('❌ Rol no válido:', role);
       return 0;
     }
-  }
 
+    const result = await this.callContract('get_role_member_count', [role]);
+    
+    // ✅ Manejar diferentes formatos de respuesta
+    let count = 0;
+    if (Array.isArray(result) && result.length > 0) {
+      count = Number(result[0] || '0');
+    } else if (typeof result === 'string') {
+      count = Number(result);
+    } else if (typeof result === 'number') {
+      count = result;
+    }
+    
+    console.log(`✅ [ROLES] Rol ${role} tiene ${count} miembros`);
+    return count;
+    
+  } catch (error: any) {
+    console.error(`❌ Error obteniendo cantidad de miembros del rol ${role}:`, error);
+    
+    // ✅ Manejar errores específicos de StarkNet
+    if (error.message.includes('undefined can\'t be computed by felt()')) {
+      console.error(`❌ El rol '${role}' no existe en el contrato`);
+      return 0;
+    }
+    
+    return 0;
+  }
+}
+
+/**
+ * ✅ CORREGIDO: Obtener miembro de rol por índice
+ */
   async getRoleMemberAtIndex(role: string, index: number): Promise<string> {
     try {
-      const result = await this.callContract('get_role_member_at_index', [role, index.toString()]);
-      return result[0];
+      console.log(`🔍 [ROLES] Obteniendo miembro ${index} del rol: ${role}`);
+      
+      // ✅ Validar parámetros
+      if (!role || role === 'undefined') {
+        throw new Error('Rol no válido');
+      }
+      
+      if (index < 0) {
+        throw new Error('Índice no válido');
+      }
+
+      const result = await this.callContract('get_role_member_at_index', [
+        role, 
+        index.toString() // ✅ Asegurar que sea string
+      ]);
+
+      // ✅ Manejar diferentes formatos de respuesta
+      let memberAddress = '0x0';
+      if (Array.isArray(result) && result.length > 0) {
+        memberAddress = result[0] || '0x0';
+      } else if (typeof result === 'string') {
+        memberAddress = result;
+      }
+      
+      console.log(`✅ [ROLES] Miembro ${index} del rol ${role}: ${memberAddress}`);
+      return memberAddress;
+      
     } catch (error: any) {
-      console.error('❌ Error obteniendo miembro del rol:', error);
-      throw new Error(`Error obteniendo miembro: ${error.message}`);
+      console.error(`❌ Error obteniendo miembro del rol ${role} en índice ${index}:`, error);
+      
+      // ✅ Manejar errores específicos
+      if (error.message.includes('undefined can\'t be computed by felt()')) {
+        console.error(`❌ El rol '${role}' no existe o el índice ${index} es inválido`);
+      }
+      
+      return '0x0';
     }
   }
+
+/**
+ * ✅ CORREGIDO: Verificar si una cuenta tiene un rol
+ */
+async hasRole(role: string, account: string): Promise<boolean> {
+  try {
+    console.log(`🔍 [ROLES] Verificando rol ${role} para cuenta: ${account}`);
+    
+    // ✅ Validar parámetros
+    if (!role || role === 'undefined' || !account || account === '0x0') {
+      console.error('❌ Parámetros inválidos para hasRole');
+      return false;
+    }
+
+    const result = await this.callContract('has_role', [role, account]);
+    
+    // ✅ Manejar diferentes formatos de respuesta
+    let hasRole = false;
+    if (Array.isArray(result) && result.length > 0) {
+      hasRole = result[0] === '0x1' || result[0] === '1' || result[0] === 'true';
+    } else if (typeof result === 'string') {
+      hasRole = result === '0x1' || result === '1' || result === 'true';
+    } else if (typeof result === 'boolean') {
+      hasRole = result;
+    }
+    
+    console.log(`✅ [ROLES] Cuenta ${account} ${hasRole ? 'TIENE' : 'NO TIENE'} rol ${role}`);
+    return hasRole;
+    
+  } catch (error: any) {
+    console.error(`❌ Error verificando rol ${role} para ${account}:`, error);
+    
+    // ✅ Manejar errores específicos
+    if (error.message.includes('undefined can\'t be computed by felt()')) {
+      console.error(`❌ El rol '${role}' no existe en el contrato`);
+    }
+    
+    return false;
+  }
+}
+
+/**
+ * ✅ NUEVO: Verificar si una función de roles existe en el contrato
+ */
+async checkRoleFunctionExists(functionName: string): Promise<boolean> {
+  try {
+    // Intentar llamar a una función simple para verificar si existe
+    await this.callContract(functionName, ['0x0']);
+    return true;
+  } catch (error: any) {
+    if (error.message.includes('entrypoint does not exist')) {
+      return false;
+    }
+    // Otros errores pueden significar que la función existe pero los parámetros son incorrectos
+    return true;
+  }
+}
 
   async getAllRoleMembers(role: string): Promise<string[]> {
     try {
@@ -1210,7 +1326,6 @@ export class AnimalContractService {
 
   // ============ FUNCIONES DE FRIGORÍFICO ============
 
-
   async procesarBatch(batchId: bigint): Promise<string> {
     try {
       console.log(`🔪 Procesando lote completo #${batchId}`);
@@ -1229,9 +1344,7 @@ export class AnimalContractService {
     }
   }
 
-
   // ============ FUNCIONES DE EXPORTADOR ============
-
 
   async transferCortesToExportadorWithPayment(
     animalId: bigint,
@@ -1673,6 +1786,7 @@ export class AnimalContractService {
       throw new Error(`Error obteniendo información: ${error.message}`);
     }
   }
+
   // ✅ Obtener todos los frigoríficos registrados
   async getAllFrigorificos(): Promise<string[]> {
     try {
@@ -1705,20 +1819,14 @@ export class AnimalContractService {
     }
   }
 
-
-  // AGREGAR AL AnimalContractService - FUNCIONES ESPECÍFICAS PARA FRIGORÍFICO
-
   // ============ FUNCIONES ESPECÍFICAS PARA FRIGORÍFICO ============
 
-
-  // AGREGAR ESTAS FUNCIONES AL AnimalContractService
-
   /**
-   * Obtener animales por estado (para frigorífico)
+   * Obtener animales por estado (para frigorífico) - VERSIÓN CORREGIDA
    */
   async getAnimalsByState(estado: EstadoAnimal): Promise<any[]> {
     try {
-      console.log(`🔍 Obteniendo animales en estado: ${EstadoAnimal[estado]} (${estado})`);
+      console.log(`🔍 [CORREGIDO] Obteniendo animales en estado: ${EstadoAnimal[estado]} (${estado})`);
       
       const animals: any[] = [];
       const stats = await this.getSystemStats();
@@ -1731,34 +1839,41 @@ export class AnimalContractService {
           const animalId = BigInt(i);
           const animalData = await this.getAnimalData(animalId);
           
-          // Verificar estado y que esté asignado a este frigorífico
-          if (animalData.estado === estado && animalData.frigorifico === this.wallet.selectedAddress) {
-            try {
-              const animalInfo = await this.getInfoAnimal(animalId);
-              animals.push({
-                id: animalId,
-                raza: animalData.raza,
-                peso: animalData.peso,
-                propietario: animalData.propietario,
-                fechaRecepcion: animalInfo.fechaCreacion || BigInt(0),
-                estado: animalData.estado,
-                metadataHash: animalInfo.metadataHash,
-                frigorifico: animalData.frigorifico,
-                loteId: animalData.lote_id
-              });
-            } catch (error) {
-              // Si getInfoAnimal falla, usar datos básicos
-              animals.push({
-                id: animalId,
-                raza: animalData.raza,
-                peso: animalData.peso,
-                propietario: animalData.propietario,
-                fechaRecepcion: BigInt(0),
-                estado: animalData.estado,
-                metadataHash: '',
-                frigorifico: animalData.frigorifico,
-                loteId: animalData.lote_id
-              });
+          // ✅ CORREGIDO: Verificar estado y que esté en un lote de este frigorífico
+          const batchId = await this.getBatchForAnimal(animalId);
+          if (batchId !== BigInt(0)) {
+            const batchInfo = await this.getBatchInfo(batchId);
+            
+            if (animalData.estado === estado && batchInfo.frigorifico === this.wallet.selectedAddress) {
+              try {
+                const animalInfo = await this.getInfoAnimal(animalId);
+                animals.push({
+                  id: animalId,
+                  raza: animalData.raza,
+                  peso: animalData.peso,
+                  propietario: animalData.propietario,
+                  fechaRecepcion: animalInfo.fechaCreacion || BigInt(0),
+                  estado: animalData.estado,
+                  metadataHash: animalInfo.metadataHash,
+                  frigorifico: batchInfo.frigorifico, // Usar frigorífico del lote
+                  loteId: batchId,
+                  batchInfo: batchInfo // Incluir info completa del lote
+                });
+              } catch (error) {
+                // Si getInfoAnimal falla, usar datos básicos
+                animals.push({
+                  id: animalId,
+                  raza: animalData.raza,
+                  peso: animalData.peso,
+                  propietario: animalData.propietario,
+                  fechaRecepcion: BigInt(0),
+                  estado: animalData.estado,
+                  metadataHash: '',
+                  frigorifico: batchInfo.frigorifico, // Usar frigorífico del lote
+                  loteId: batchId,
+                  batchInfo: batchInfo // Incluir info completa del lote
+                });
+              }
             }
           }
         } catch (error) {
@@ -1767,7 +1882,7 @@ export class AnimalContractService {
         }
       }
       
-      console.log(`✅ ${animals.length} animales encontrados en estado ${EstadoAnimal[estado]}`);
+      console.log(`✅ [CORREGIDO] ${animals.length} animales encontrados en estado ${EstadoAnimal[estado]}`);
       return animals;
       
     } catch (error: any) {
@@ -1775,7 +1890,6 @@ export class AnimalContractService {
       return [];
     }
   }
-
   /**
    * Obtener cortes creados por el frigorífico actual
    */
@@ -1829,7 +1943,7 @@ export class AnimalContractService {
   async getAnimalsByFrigorifico(frigorificoAddress?: string): Promise<any[]> {
     try {
       const targetAddress = frigorificoAddress || this.wallet.selectedAddress;
-      console.log(`🔍 Obteniendo animales para frigorífico: ${targetAddress}`);
+      console.log(`🔍 [CORREGIDO] Obteniendo animales para frigorífico: ${targetAddress}`);
       
       const animals: any[] = [];
       const stats = await this.getSystemStats();
@@ -1842,34 +1956,42 @@ export class AnimalContractService {
           const animalId = BigInt(i);
           const animalData = await this.getAnimalData(animalId);
           
-          // Verificar si el animal está asignado a este frigorífico
-          if (animalData.frigorifico === targetAddress) {
-            try {
-              const animalInfo = await this.getInfoAnimal(animalId);
-              animals.push({
-                id: animalId,
-                raza: animalData.raza,
-                peso: animalData.peso,
-                propietario: animalData.propietario,
-                fechaRecepcion: animalInfo.fechaCreacion || BigInt(0),
-                estado: animalData.estado,
-                metadataHash: animalInfo.metadataHash,
-                frigorifico: animalData.frigorifico,
-                loteId: animalData.lote_id
-              });
-            } catch (error) {
-              // Si getInfoAnimal falla, usar datos básicos
-              animals.push({
-                id: animalId,
-                raza: animalData.raza,
-                peso: animalData.peso,
-                propietario: animalData.propietario,
-                fechaRecepcion: BigInt(0),
-                estado: animalData.estado,
-                metadataHash: '',
-                frigorifico: animalData.frigorifico,
-                loteId: animalData.lote_id
-              });
+          // ✅ CORREGIDO: Buscar por lote transferido al frigorífico, NO por campo frigorifico del animal
+          const batchId = await this.getBatchForAnimal(animalId);
+          if (batchId !== BigInt(0)) {
+            const batchInfo = await this.getBatchInfo(batchId);
+            
+            // Verificar si el lote fue transferido a este frigorífico
+            if (batchInfo.frigorifico === targetAddress) {
+              try {
+                const animalInfo = await this.getInfoAnimal(animalId);
+                animals.push({
+                  id: animalId,
+                  raza: animalData.raza,
+                  peso: animalData.peso,
+                  propietario: animalData.propietario,
+                  fechaRecepcion: animalInfo.fechaCreacion || BigInt(0),
+                  estado: animalData.estado,
+                  metadataHash: animalInfo.metadataHash,
+                  frigorifico: batchInfo.frigorifico, // Usar el frigorífico del lote
+                  loteId: batchId,
+                  batchInfo: batchInfo // Incluir info completa del lote
+                });
+              } catch (error) {
+                // Si getInfoAnimal falla, usar datos básicos
+                animals.push({
+                  id: animalId,
+                  raza: animalData.raza,
+                  peso: animalData.peso,
+                  propietario: animalData.propietario,
+                  fechaRecepcion: BigInt(0),
+                  estado: animalData.estado,
+                  metadataHash: '',
+                  frigorifico: batchInfo.frigorifico,
+                  loteId: batchId,
+                  batchInfo: batchInfo
+                });
+              }
             }
           }
         } catch (error) {
@@ -1878,7 +2000,7 @@ export class AnimalContractService {
         }
       }
       
-      console.log(`✅ ${animals.length} animales encontrados para frigorífico`);
+      console.log(`✅ [CORREGIDO] ${animals.length} animales encontrados para frigorífico`);
       return animals;
       
     } catch (error: any) {
@@ -1886,451 +2008,512 @@ export class AnimalContractService {
       return [];
     }
   }
-
-/**
- * Procesar animal (cambiar estado a PROCESADO)
- */
-async procesarAnimal(animalId: bigint): Promise<string> {
-  try {
-    console.log(`🔪 Procesando animal #${animalId}`);
-    
-    // Verificar que el animal esté asignado a este frigorífico
-    const animalData = await this.getAnimalData(animalId);
-    if (animalData.frigorifico !== this.wallet.selectedAddress) {
-      throw new Error('Este animal no está asignado a tu frigorífico');
-    }
-    
-    if (animalData.estado !== EstadoAnimal.CREADO) {
-      throw new Error('Este animal ya ha sido procesado o no está en estado válido');
-    }
-    
-    const result = await this.sendTransaction(
-      CONTRACT_FUNCTIONS.PROCESAR_ANIMAL,
-      [animalId.toString()]
-    );
-
-    const txHash = this.extractTransactionHash(result);
-    console.log('✅ Animal procesado exitosamente');
-    return txHash;
-  } catch (error: any) {
-    console.error('❌ Error procesando animal:', error);
-    throw new Error(`Error procesando animal: ${error.message}`);
-  }
-}
-
-/**
- * Crear corte a partir de animal procesado
- */
-async crearCorte(
-  animalId: bigint,
-  tipoCorte: TipoCorte,
-  peso: bigint
-): Promise<{ corteId: bigint; txHash: string }> {
-  try {
-    console.log(`🥩 Creando corte para animal #${animalId}, tipo: ${TipoCorte[tipoCorte]}, peso: ${peso}kg`);
-    
-    // Verificar que el animal esté procesado y asignado a este frigorífico
-    const animalData = await this.getAnimalData(animalId);
-    if (animalData.frigorifico !== this.wallet.selectedAddress) {
-      throw new Error('Este animal no está asignado a tu frigorífico');
-    }
-    
-    if (animalData.estado !== EstadoAnimal.PROCESADO) {
-      throw new Error('El animal debe estar en estado PROCESADO para crear cortes');
-    }
-    
-    const result = await this.sendTransaction(
-      CONTRACT_FUNCTIONS.CREAR_CORTE,
-      [
-        animalId.toString(),
-        tipoCorte.toString(),
-        peso.toString()
-      ]
-    );
-
-    const txHash = this.extractTransactionHash(result);
-    
-    // Obtener el ID del corte creado
-    const corteId = await this.getNewlyCreatedCorteId();
-    
-    console.log('✅ Corte creado exitosamente:', corteId);
-    return { corteId, txHash };
-  } catch (error: any) {
-    console.error('❌ Error creando corte:', error);
-    throw new Error(`Error creando corte: ${error.message}`);
-  }
-}
-
-/**
- * Transferir corte a exportador
- */
-async transferCorteToExportador(
-  animalId: bigint,
-  corteId: bigint,
-  exportador: string
-): Promise<string> {
-  try {
-    console.log(`🌍 Transfiriendo corte #${corteId} a exportador: ${exportador}`);
-    
-    // Verificar que el corte pertenezca a este frigorífico
-    const corteInfo = await this.getInfoCorte(corteId);
-    if (corteInfo.frigorifico !== this.wallet.selectedAddress) {
-      throw new Error('Este corte no pertenece a tu frigorífico');
-    }
-    
-    const result = await this.sendTransaction(
-      CONTRACT_FUNCTIONS.TRANSFER_CORTE_TO_EXPORTADOR,
-      [
-        animalId.toString(),
-        corteId.toString(),
-        exportador
-      ]
-    );
-
-    const txHash = this.extractTransactionHash(result);
-    console.log('✅ Corte transferido a exportador exitosamente');
-    return txHash;
-  } catch (error: any) {
-    console.error('❌ Error transfiriendo corte a exportador:', error);
-    throw new Error(`Error transfiriendo corte: ${error.message}`);
-  }
-}
-
-/**
- * Transferir múltiples cortes a exportador
- */
-async batchTransferCortes(
-  animalId: bigint,
-  corteIds: bigint[],
-  exportador: string
-): Promise<string> {
-  try {
-    console.log(`🌍 Transferiendo ${corteIds.length} cortes a exportador: ${exportador}`);
-    
-    const corteIdsStr = corteIds.map(id => id.toString());
-    
-    const result = await this.sendTransaction(
-      CONTRACT_FUNCTIONS.BATCH_TRANSFER_CORTES,
-      [
-        animalId.toString(),
-        corteIdsStr.length,
-        ...corteIdsStr,
-        exportador
-      ]
-    );
-
-    const txHash = this.extractTransactionHash(result);
-    console.log('✅ Cortes transferidos a exportador exitosamente');
-    return txHash;
-  } catch (error: any) {
-    console.error('❌ Error transfiriendo cortes a exportador:', error);
-    throw new Error(`Error transfiriendo cortes: ${error.message}`);
-  }
-}
-
-/**
- * Generar QR para un corte
- */
-async generateQrForCorte(animalId: bigint, corteId: bigint): Promise<string> {
-  try {
-    console.log(`📱 Generando QR para corte #${corteId} del animal #${animalId}`);
-    
-    // Verificar que el corte pertenezca a este frigorífico
-    const corteInfo = await this.getInfoCorte(corteId);
-    if (corteInfo.frigorifico !== this.wallet.selectedAddress) {
-      throw new Error('Este corte no pertenece a tu frigorífico');
-    }
-    
-    const result = await this.sendTransaction(
-      CONTRACT_FUNCTIONS.GENERATE_QR_FOR_CORTE,
-      [
-        animalId.toString(),
-        corteId.toString()
-      ]
-    );
-
-    const txHash = this.extractTransactionHash(result);
-    
-    // En una implementación real, extraeríamos el QR hash del evento
-    // Por ahora retornamos el txHash como referencia
-    console.log('✅ QR generado exitosamente');
-    return txHash;
-  } catch (error: any) {
-    console.error('❌ Error generando QR:', error);
-    throw new Error(`Error generando QR: ${error.message}`);
-  }
-}
-
-/**
- * Certificar un corte
- */
-async certifyCorte(animalId: bigint, corteId: bigint): Promise<string> {
-  try {
-    console.log(`🏅 Certificando corte #${corteId} del animal #${animalId}`);
-    
-    const result = await this.sendTransaction(
-      CONTRACT_FUNCTIONS.CERTIFY_CORTE,
-      [
-        animalId.toString(),
-        corteId.toString()
-      ]
-    );
-
-    const txHash = this.extractTransactionHash(result);
-    console.log('✅ Corte certificado exitosamente');
-    return txHash;
-  } catch (error: any) {
-    console.error('❌ Error certificando corte:', error);
-    throw new Error(`Error certificando corte: ${error.message}`);
-  }
-}
-
-// ============ FUNCIONES AUXILIARES PRIVADAS ============
-
-/**
- * Obtener el ID del último corte creado
- */
-private async getNewlyCreatedCorteId(): Promise<bigint> {
-  try {
-    const stats = await this.getSystemStats();
-    const currentNextId = stats.next_corte_id || BigInt(1);
-    const newlyCreatedId = currentNextId - BigInt(1);
-    
-    if (newlyCreatedId > BigInt(0)) {
-      try {
-        const corteInfo = await this.getInfoCorte(newlyCreatedId);
-        if (corteInfo && corteInfo.frigorifico === this.wallet.selectedAddress) {
-          return newlyCreatedId;
-        }
-      } catch (error) {
-        // Corte no existe, continuar
+  /**
+   * Procesar animal (cambiar estado a PROCESADO)
+   */
+  async procesarAnimal(animalId: bigint): Promise<string> {
+    try {
+      console.log(`🔪 Procesando animal #${animalId}`);
+      
+      // Verificar que el animal esté asignado a este frigorífico
+      const animalData = await this.getAnimalData(animalId);
+      if (animalData.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este animal no está asignado a tu frigorífico');
       }
+      
+      if (animalData.estado !== EstadoAnimal.CREADO) {
+        throw new Error('Este animal ya ha sido procesado o no está en estado válido');
+      }
+      
+      const result = await this.sendTransaction(
+        CONTRACT_FUNCTIONS.PROCESAR_ANIMAL,
+        [animalId.toString()]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      console.log('✅ Animal procesado exitosamente');
+      return txHash;
+    } catch (error: any) {
+      console.error('❌ Error procesando animal:', error);
+      throw new Error(`Error procesando animal: ${error.message}`);
     }
-    
-    return await this.findLatestUserCorteId();
-    
-  } catch (error) {
-    console.error('Error obteniendo ID de corte creado:', error);
-    return BigInt(1);
   }
-}
 
-/**
- * Encontrar el último corte del usuario
- */
-private async findLatestUserCorteId(): Promise<bigint> {
-  try {
-    const userCortes = await this.getCortesByFrigorifico();
-    if (userCortes.length > 0) {
-      return userCortes.reduce((max, corte) => corte.id > max ? corte.id : max, BigInt(0));
+  /**
+   * Crear corte a partir de animal procesado
+   */
+  async crearCorte(
+    animalId: bigint,
+    tipoCorte: TipoCorte,
+    peso: bigint
+  ): Promise<{ corteId: bigint; txHash: string }> {
+    try {
+      console.log(`🥩 Creando corte para animal #${animalId}, tipo: ${TipoCorte[tipoCorte]}, peso: ${peso}kg`);
+      
+      // Verificar que el animal esté procesado y asignado a este frigorífico
+      const animalData = await this.getAnimalData(animalId);
+      if (animalData.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este animal no está asignado a tu frigorífico');
+      }
+      
+      if (animalData.estado !== EstadoAnimal.PROCESADO) {
+        throw new Error('El animal debe estar en estado PROCESADO para crear cortes');
+      }
+      
+      const result = await this.sendTransaction(
+        CONTRACT_FUNCTIONS.CREAR_CORTE,
+        [
+          animalId.toString(),
+          tipoCorte.toString(),
+          peso.toString()
+        ]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      
+      // Obtener el ID del corte creado
+      const corteId = await this.getNewlyCreatedCorteId();
+      
+      console.log('✅ Corte creado exitosamente:', corteId);
+      return { corteId, txHash };
+    } catch (error: any) {
+      console.error('❌ Error creando corte:', error);
+      throw new Error(`Error creando corte: ${error.message}`);
     }
-    return BigInt(1);
-  } catch (error) {
-    console.error('Error encontrando último corte del usuario:', error);
-    return BigInt(1);
   }
-}
 
-/**
- * Obtener información extendida del animal
- */
+  /**
+   * Transferir corte a exportador
+   */
+  async transferCorteToExportador(
+    animalId: bigint,
+    corteId: bigint,
+    exportador: string
+  ): Promise<string> {
+    try {
+      console.log(`🌍 Transfiriendo corte #${corteId} a exportador: ${exportador}`);
+      
+      // Verificar que el corte pertenezca a este frigorífico
+      const corteInfo = await this.getInfoCorte(corteId);
+      if (corteInfo.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este corte no pertenece a tu frigorífico');
+      }
+      
+      const result = await this.sendTransaction(
+        CONTRACT_FUNCTIONS.TRANSFER_CORTE_TO_EXPORTADOR,
+        [
+          animalId.toString(),
+          corteId.toString(),
+          exportador
+        ]
+      );
 
-/**
- * Obtener información de un corte específico
+      const txHash = this.extractTransactionHash(result);
+      console.log('✅ Corte transferido a exportador exitosamente');
+      return txHash;
+    } catch (error: any) {
+      console.error('❌ Error transfiriendo corte a exportador:', error);
+      throw new Error(`Error transfiriendo corte: ${error.message}`);
+    }
+  }
+
+  /**
+   * Transferir múltiples cortes a exportador
+   */
+  async batchTransferCortes(
+    animalId: bigint,
+    corteIds: bigint[],
+    exportador: string
+  ): Promise<string> {
+    try {
+      console.log(`🌍 Transferiendo ${corteIds.length} cortes a exportador: ${exportador}`);
+      
+      const corteIdsStr = corteIds.map(id => id.toString());
+      
+      const result = await this.sendTransaction(
+        CONTRACT_FUNCTIONS.BATCH_TRANSFER_CORTES,
+        [
+          animalId.toString(),
+          corteIdsStr.length,
+          ...corteIdsStr,
+          exportador
+        ]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      console.log('✅ Cortes transferidos a exportador exitosamente');
+      return txHash;
+    } catch (error: any) {
+      console.error('❌ Error transfiriendo cortes a exportador:', error);
+      throw new Error(`Error transfiriendo cortes: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generar QR para un corte
+   */
+  async generateQrForCorte(animalId: bigint, corteId: bigint): Promise<string> {
+    try {
+      console.log(`📱 Generando QR para corte #${corteId} del animal #${animalId}`);
+      
+      // Verificar que el corte pertenezca a este frigorífico
+      const corteInfo = await this.getInfoCorte(corteId);
+      if (corteInfo.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este corte no pertenece a tu frigorífico');
+      }
+      
+      const result = await this.sendTransaction(
+        CONTRACT_FUNCTIONS.GENERATE_QR_FOR_CORTE,
+        [
+          animalId.toString(),
+          corteId.toString()
+        ]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      
+      // En una implementación real, extraeríamos el QR hash del evento
+      // Por ahora retornamos el txHash como referencia
+      console.log('✅ QR generado exitosamente');
+      return txHash;
+    } catch (error: any) {
+      console.error('❌ Error generando QR:', error);
+      throw new Error(`Error generando QR: ${error.message}`);
+    }
+  }
+
+  /**
+   * Certificar un corte
+   */
+  async certifyCorte(animalId: bigint, corteId: bigint): Promise<string> {
+    try {
+      console.log(`🏅 Certificando corte #${corteId} del animal #${animalId}`);
+      
+      const result = await this.sendTransaction(
+        CONTRACT_FUNCTIONS.CERTIFY_CORTE,
+        [
+          animalId.toString(),
+          corteId.toString()
+        ]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      console.log('✅ Corte certificado exitosamente');
+      return txHash;
+    } catch (error: any) {
+      console.error('❌ Error certificando corte:', error);
+      throw new Error(`Error certificando corte: ${error.message}`);
+    }
+  }
+
+  // ============ FUNCIONES AUXILIARES PRIVADAS ============
+
+  /**
+   * Obtener el ID del último corte creado
+   */
+  private async getNewlyCreatedCorteId(): Promise<bigint> {
+    try {
+      const stats = await this.getSystemStats();
+      const currentNextId = stats.next_corte_id || BigInt(1);
+      const newlyCreatedId = currentNextId - BigInt(1);
+      
+      if (newlyCreatedId > BigInt(0)) {
+        try {
+          const corteInfo = await this.getInfoCorte(newlyCreatedId);
+          if (corteInfo && corteInfo.frigorifico === this.wallet.selectedAddress) {
+            return newlyCreatedId;
+          }
+        } catch (error) {
+          // Corte no existe, continuar
+        }
+      }
+      
+      return await this.findLatestUserCorteId();
+      
+    } catch (error) {
+      console.error('Error obteniendo ID de corte creado:', error);
+      return BigInt(1);
+    }
+  }
+
+  /**
+   * Encontrar el último corte del usuario
+   */
+  private async findLatestUserCorteId(): Promise<bigint> {
+    try {
+      const userCortes = await this.getCortesByFrigorifico();
+      if (userCortes.length > 0) {
+        return userCortes.reduce((max, corte) => corte.id > max ? corte.id : max, BigInt(0));
+      }
+      return BigInt(1);
+    } catch (error) {
+      console.error('Error encontrando último corte del usuario:', error);
+      return BigInt(1);
+    }
+  }
+
+  /**
+   * Obtener información de un corte específico
+   */
+  async getInfoCorte(corteId: bigint): Promise<any> {
+    try {
+      // Necesitamos encontrar el animalId primero ya que la función requiere ambos parámetros
+      const stats = await this.getSystemStats();
+      const totalAnimals = Number(stats.total_animals_created || 0);
+      
+      for (let i = 1; i <= totalAnimals; i++) {
+        try {
+          const animalId = BigInt(i);
+          const result = await this.callContract(
+            CONTRACT_FUNCTIONS.GET_INFO_CORTE, 
+            [animalId.toString(), corteId.toString()]
+          );
+          
+          if (result && result.length >= 8) {
+            return {
+              animalId: animalId,
+              tipoCorte: Number(result[0]),
+              peso: BigInt(result[1]),
+              fechaProcesamiento: BigInt(result[2]),
+              frigorifico: result[3],
+              certificado: result[4] === '0x1' || result[4] === '1',
+              loteExportacion: BigInt(result[5]),
+              propietario: result[6],
+              id: corteId
+            };
+          }
+        } catch (error) {
+          // Continuar buscando en el siguiente animal
+        }
+      }
+      
+      throw new Error('Corte no encontrado');
+      
+    } catch (error: any) {
+      console.error('❌ Error obteniendo información del corte:', error);
+      throw new Error(`Error obteniendo información: ${error.message}`);
+    }
+  }
+
+  /**
+   * Verificar permisos de frigorífico usando ROLES de tu config
+   */
+  async verifyFrigorificoPermissions(): Promise<boolean> {
+    try {
+      const hasRole = await this.hasRole(ROLES.FRIGORIFICO_ROLE, this.wallet.selectedAddress);
+      console.log(`🔐 Permisos de frigorífico (${ROLES.FRIGORIFICO_ROLE}): ${hasRole}`);
+      return hasRole;
+    } catch (error) {
+      console.error('Error verificando permisos:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Obtener todos los exportadores registrados
+   */
+  async getAllExportadores(): Promise<string[]> {
+    try {
+      console.log('🔍 Obteniendo lista de exportadores...');
+      
+      const exportadores: string[] = [];
+      const exportadorCount = await this.getRoleMemberCount(ROLES.EXPORTER_ROLE);
+      
+      for (let i = 0; i < exportadorCount; i++) {
+        try {
+          const exportadorAddress = await this.getRoleMemberAtIndex(ROLES.EXPORTER_ROLE, i);
+          if (exportadorAddress && exportadorAddress !== '0x0') {
+            exportadores.push(exportadorAddress);
+          }
+        } catch (error) {
+          console.log(`Error obteniendo exportador en índice ${i}:`, error);
+        }
+      }
+      
+      console.log(`✅ ${exportadores.length} exportadores obtenidos`);
+      return exportadores;
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo exportadores:', error);
+      return [];
+    }
+  }
+
+  // ============ FUNCIONES DE VALIDACIÓN MEJORADAS ============
+
+  /**
+   * Validar que un animal puede ser procesado por este frigorífico - VERSIÓN CORREGIDA
+   */
+  async validateAnimalForProcessing(animalId: bigint): Promise<{ isValid: boolean; message: string }> {
+    try {
+      const animalData = await this.getAnimalData(animalId);
+      
+      // ✅ CORREGIDO: Verificar a través del lote, NO del campo frigorifico del animal
+      const batchId = await this.getBatchForAnimal(animalId);
+      if (batchId === BigInt(0)) {
+        return { isValid: false, message: 'Este animal no está en ningún lote' };
+      }
+      
+      const batchInfo = await this.getBatchInfo(batchId);
+      if (batchInfo.frigorifico !== this.wallet.selectedAddress) {
+        return { isValid: false, message: 'Este animal no está asignado a tu frigorífico' };
+      }
+      
+      if (animalData.estado !== EstadoAnimal.CREADO) {
+        return { 
+          isValid: false, 
+          message: `El animal está en estado "${EstadoAnimal[animalData.estado]}" y no puede ser procesado` 
+        };
+      }
+      
+      return { isValid: true, message: 'Animal válido para procesamiento' };
+      
+    } catch (error: any) {
+      return { isValid: false, message: `Error validando animal: ${error.message}` };
+    }
+  }
+
+  /**
+ * Función de diagnóstico para verificar transferencias - VERSIÓN MEJORADA
  */
-async getInfoCorte(corteId: bigint): Promise<any> {
+async diagnoseTransferencia(batchId: bigint): Promise<void> {
   try {
-    // Necesitamos encontrar el animalId primero ya que la función requiere ambos parámetros
-    const stats = await this.getSystemStats();
-    const totalAnimals = Number(stats.total_animals_created || 0);
+    console.log(`🔍 [DIAGNÓSTICO] Analizando transferencia del lote #${batchId}`);
     
-    for (let i = 1; i <= totalAnimals; i++) {
+    const batchInfo = await this.getBatchInfo(batchId);
+    const animalsInBatch = await this.getAnimalsInBatch(batchId);
+    
+    // ✅ MEJORADO: Calcular cantidad real de animales
+    const cantidadRealAnimales = animalsInBatch.length;
+    
+    console.log('📊 Información del lote:', {
+      id: batchId.toString(),
+      propietario: batchInfo.propietario,
+      frigorifico: batchInfo.frigorifico,
+      estado: batchInfo.estado,
+      cantidad_animales_en_batchInfo: batchInfo.cantidad_animales,
+      cantidad_animales_reales: cantidadRealAnimales,
+      coincide: batchInfo.cantidad_animales === cantidadRealAnimales,
+      fecha_creacion: batchInfo.fecha_creacion?.toString(),
+      fecha_transferencia: batchInfo.fecha_transferencia?.toString(),
+      fecha_procesamiento: batchInfo.fecha_procesamiento?.toString()
+    });
+    
+    console.log(`🐄 ${cantidadRealAnimales} animales en el lote:`, animalsInBatch.map(id => id.toString()));
+    
+    // ✅ MEJORADO: Información más detallada de cada animal
+    for (const animalId of animalsInBatch) {
       try {
-        const animalId = BigInt(i);
-        const result = await this.callContract(
-          CONTRACT_FUNCTIONS.GET_INFO_CORTE, 
-          [animalId.toString(), corteId.toString()]
-        );
+        const animalData = await this.getAnimalData(animalId);
+        const animalBatchId = await this.getBatchForAnimal(animalId);
         
-        if (result && result.length >= 8) {
-          return {
-            animalId: animalId,
-            tipoCorte: Number(result[0]),
-            peso: BigInt(result[1]),
-            fechaProcesamiento: BigInt(result[2]),
-            frigorifico: result[3],
-            certificado: result[4] === '0x1' || result[4] === '1',
-            loteExportacion: BigInt(result[5]),
-            propietario: result[6],
-            id: corteId
-          };
-        }
+        console.log(`   🐄 Animal #${animalId}:`, {
+          propietario: animalData.propietario,
+          estado: animalData.estado,
+          estado_texto: EstadoAnimal[animalData.estado],
+          lote_id_en_animalData: animalData.lote_id,
+          lote_id_de_getBatchForAnimal: animalBatchId.toString(),
+          coincide_lote_ids: animalData.lote_id === Number(animalBatchId),
+          peso: animalData.peso?.toString(),
+          raza: animalData.raza,
+          raza_texto: RazaAnimal[animalData.raza]
+        });
       } catch (error) {
-        // Continuar buscando en el siguiente animal
+        console.log(`   ❌ Error con animal #${animalId}:`, error);
       }
     }
     
-    throw new Error('Corte no encontrado');
+    // ✅ NUEVO: Verificación de consistencia
+    console.log('🔍 [VERIFICACIÓN] Resumen de diagnóstico:');
+    console.log(`   📦 Lote #${batchId}:`);
+    console.log(`      - Propietario: ${batchInfo.propietario}`);
+    console.log(`      - Frigorífico: ${batchInfo.frigorifico} ${batchInfo.frigorifico === this.wallet.selectedAddress ? '✅ (TU FRIGORÍFICO)' : '❌ (NO ES TU FRIGORÍFICO)'}`);
+    console.log(`      - Estado: ${batchInfo.estado} ${batchInfo.estado === 0 ? '✅ (ACTIVO)' : '❌ (PROCESADO/INACTIVO)'}`);
+    console.log(`      - Animales: ${cantidadRealAnimales} (${batchInfo.cantidad_animales} en batchInfo) ${batchInfo.cantidad_animales === cantidadRealAnimales ? '✅' : '❌ INCONSISTENCIA'}`);
+    console.log(`      - Transferido a este frigorífico: ${batchInfo.frigorifico === this.wallet.selectedAddress ? '✅ SÍ' : '❌ NO'}`);
+    console.log(`      - Listo para procesar: ${batchInfo.frigorifico === this.wallet.selectedAddress && batchInfo.estado === 0 ? '✅ SÍ' : '❌ NO'}`);
     
-  } catch (error: any) {
-    console.error('❌ Error obteniendo información del corte:', error);
-    throw new Error(`Error obteniendo información: ${error.message}`);
-  }
-}
-
-/**
- * Verificar permisos de frigorífico usando ROLES de tu config
- */
-async verifyFrigorificoPermissions(): Promise<boolean> {
-  try {
-    const hasRole = await this.hasRole(ROLES.FRIGORIFICO_ROLE, this.wallet.selectedAddress);
-    console.log(`🔐 Permisos de frigorífico (${ROLES.FRIGORIFICO_ROLE}): ${hasRole}`);
-    return hasRole;
   } catch (error) {
-    console.error('Error verificando permisos:', error);
-    return false;
+    console.error('❌ Error en diagnóstico:', error);
   }
 }
 
-/**
- * Obtener todos los exportadores registrados
- */
-async getAllExportadores(): Promise<string[]> {
-  try {
-    console.log('🔍 Obteniendo lista de exportadores...');
-    
-    const exportadores: string[] = [];
-    const exportadorCount = await this.getRoleMemberCount(ROLES.EXPORTER_ROLE);
-    
-    for (let i = 0; i < exportadorCount; i++) {
-      try {
-        const exportadorAddress = await this.getRoleMemberAtIndex(ROLES.EXPORTER_ROLE, i);
-        if (exportadorAddress && exportadorAddress !== '0x0') {
-          exportadores.push(exportadorAddress);
-        }
-      } catch (error) {
-        console.log(`Error obteniendo exportador en índice ${i}:`, error);
+  /**
+   * Validar que se puede crear un corte para un animal
+   */
+  async validateAnimalForCorteCreation(animalId: bigint): Promise<{ isValid: boolean; message: string }> {
+    try {
+      const animalData = await this.getAnimalData(animalId);
+      
+      if (animalData.frigorifico !== this.wallet.selectedAddress) {
+        return { isValid: false, message: 'Este animal no está asignado a tu frigorífico' };
       }
+      
+      if (animalData.estado !== EstadoAnimal.PROCESADO) {
+        return { 
+          isValid: false, 
+          message: `El animal debe estar en estado PROCESADO para crear cortes (actual: ${EstadoAnimal[animalData.estado]})` 
+        };
+      }
+      
+      return { isValid: true, message: 'Animal válido para creación de cortes' };
+      
+    } catch (error: any) {
+      return { isValid: false, message: `Error validando animal: ${error.message}` };
     }
-    
-    console.log(`✅ ${exportadores.length} exportadores obtenidos`);
-    return exportadores;
-    
-  } catch (error) {
-    console.error('❌ Error obteniendo exportadores:', error);
-    return [];
   }
-}
 
-// ============ FUNCIONES DE VALIDACIÓN MEJORADAS ============
+  // ============ FUNCIONES DE ACEPTACIÓN ============
 
-/**
- * Validar que un animal puede ser procesado por este frigorífico
- */
-async validateAnimalForProcessing(animalId: bigint): Promise<{ isValid: boolean; message: string }> {
-  try {
-    const animalData = await this.getAnimalData(animalId);
-    
-    if (animalData.frigorifico !== this.wallet.selectedAddress) {
-      return { isValid: false, message: 'Este animal no está asignado a tu frigorífico' };
-    }
-    
-    if (animalData.estado !== EstadoAnimal.CREADO) {
-      return { 
-        isValid: false, 
-        message: `El animal está en estado "${EstadoAnimal[animalData.estado]}" y no puede ser procesado` 
-      };
-    }
-    
-    return { isValid: true, message: 'Animal válido para procesamiento' };
-    
-  } catch (error: any) {
-    return { isValid: false, message: `Error validando animal: ${error.message}` };
-  }
-}
-
-/**
- * Validar que se puede crear un corte para un animal
- */
-async validateAnimalForCorteCreation(animalId: bigint): Promise<{ isValid: boolean; message: string }> {
-  try {
-    const animalData = await this.getAnimalData(animalId);
-    
-    if (animalData.frigorifico !== this.wallet.selectedAddress) {
-      return { isValid: false, message: 'Este animal no está asignado a tu frigorífico' };
-    }
-    
-    if (animalData.estado !== EstadoAnimal.PROCESADO) {
-      return { 
-        isValid: false, 
-        message: `El animal debe estar en estado PROCESADO para crear cortes (actual: ${EstadoAnimal[animalData.estado]})` 
-      };
-    }
-    
-    return { isValid: true, message: 'Animal válido para creación de cortes' };
-    
-  } catch (error: any) {
-    return { isValid: false, message: `Error validando animal: ${error.message}` };
-  }
-}
-
-// AGREGAR AL AnimalContractService - FUNCIONES DE ACEPTACIÓN
-
-/**
- * Obtener animales pendientes de aceptación por el frigorífico
- */
+  /**
+   * Obtener animales pendientes de aceptación por el frigorífico - VERSIÓN CORREGIDA
+   */
 async getPendingAnimalsForFrigorifico(): Promise<any[]> {
   try {
-    console.log('🔍 Obteniendo animales pendientes de aceptación...');
+    console.log('🔍 [CORREGIDO] Obteniendo animales pendientes para frigorífico...');
     
     const pendingAnimals: any[] = [];
     const stats = await this.getSystemStats();
     const totalAnimals = Number(stats.total_animals_created || 0);
+    
+    console.log(`📊 Revisando ${totalAnimals} animales...`);
     
     for (let i = 1; i <= totalAnimals; i++) {
       try {
         const animalId = BigInt(i);
         const animalData = await this.getAnimalData(animalId);
         
-        // Animales que tienen este frigorífico como destino pero aún no han sido aceptados
-        // Esto generalmente se determina por el estado y el campo frigorifico
-        if (animalData.frigorifico === this.wallet.selectedAddress && 
-            animalData.estado === EstadoAnimal.CREADO) {
-          try {
-            const animalInfo = await this.getInfoAnimal(animalId);
-            pendingAnimals.push({
-              id: animalId,
-              raza: animalData.raza,
-              peso: animalData.peso,
-              propietario: animalData.propietario,
-              fechaRecepcion: animalInfo.fechaCreacion || BigInt(0),
-              estado: animalData.estado,
-              metadataHash: animalInfo.metadataHash,
-              frigorifico: animalData.frigorifico,
-              loteId: animalData.lote_id,
-              tipo: 'individual'
-            });
-          } catch (error) {
-            pendingAnimals.push({
-              id: animalId,
-              raza: animalData.raza,
-              peso: animalData.peso,
-              propietario: animalData.propietario,
-              fechaRecepcion: BigInt(0),
-              estado: animalData.estado,
-              metadataHash: '',
-              frigorifico: animalData.frigorifico,
-              loteId: animalData.lote_id,
-              tipo: 'individual'
-            });
-          }
+        // ✅ CRITERIO CORREGIDO: 
+        // - Animal en estado CREADO (0) 
+        // - Y tiene frigorífico asignado (diferente de 0x0)
+        // - Y el frigorífico es el actual
+        if (animalData.estado === 0 && 
+            animalData.frigorifico !== '0x0' &&
+            animalData.frigorifico.toLowerCase() === this.wallet.selectedAddress.toLowerCase()) {
+          
+          const batchId = await this.getBatchForAnimal(animalId);
+          
+          pendingAnimals.push({
+            id: animalId,
+            raza: animalData.raza,
+            peso: animalData.peso,
+            propietario: animalData.propietario,
+            fechaRecepcion: BigInt(0), // Por defecto
+            estado: animalData.estado,
+            frigorifico: animalData.frigorifico,
+            fecha_transferencia: BigInt(0), // Por defecto
+            loteId: batchId,
+            tipo: 'individual'
+          });
+          
+          console.log(`✅ Animal pendiente encontrado: #${animalId}`);
         }
       } catch (error) {
         // Continuar con siguiente animal
       }
     }
     
-    console.log(`✅ ${pendingAnimals.length} animales pendientes de aceptación`);
+    console.log(`✅ [CORREGIDO] ${pendingAnimals.length} animales pendientes encontrados`);
     return pendingAnimals;
     
   } catch (error: any) {
@@ -2340,32 +2523,55 @@ async getPendingAnimalsForFrigorifico(): Promise<any[]> {
 }
 
 /**
- * Obtener lotes pendientes de aceptación por el frigorífico
- */
-async getPendingBatchesForFrigorifico(): Promise<any[]> {
+ * ✅ CORREGIDO: Obtener lotes pendientes de aceptación
+
+
+  /**
+   * Obtener lotes pendientes de aceptación por el frigorífico
+   */
+  async getPendingBatchesForFrigorifico(): Promise<any[]> {
   try {
-    console.log('🔍 Obteniendo lotes pendientes de aceptación...');
+    console.log('🔍 [CORREGIDO] Obteniendo lotes pendientes para frigorífico...');
     
     const pendingBatches: any[] = [];
     const stats = await this.getSystemStats();
     const totalBatches = Number(stats.total_batches_created || 0);
+    
+    console.log(`📊 Revisando ${totalBatches} lotes...`);
     
     for (let i = 1; i <= totalBatches; i++) {
       try {
         const batchId = BigInt(i);
         const batchInfo = await this.getBatchInfo(batchId);
         
-        // Lotes que tienen este frigorífico como destino pero aún no han sido procesados
-        if (batchInfo.frigorifico === this.wallet.selectedAddress && 
-            batchInfo.estado === 0) { // 0 = activo, no procesado
+        // ✅ CRITERIO CORREGIDO:
+        // - Lote tiene frigorífico asignado (diferente de 0x0)
+        // - Y el frigorífico es el actual
+        // - Y estado es 0 (activo) o 1 (transferido)
+        if (batchInfo.frigorifico !== '0x0' &&
+            batchInfo.frigorifico.toLowerCase() === this.wallet.selectedAddress.toLowerCase() &&
+            (batchInfo.estado === 0 || batchInfo.estado === 1)) {
+          
           const animalsInBatch = await this.getAnimalsInBatch(batchId);
           
           pendingBatches.push({
             id: batchId,
-            ...batchInfo,
-            animal_ids: animalsInBatch,
+            propietario: batchInfo.propietario,
+            frigorifico: batchInfo.frigorifico,
+            fecha_creacion: batchInfo.fecha_creacion,
+            fecha_transferencia: batchInfo.fecha_transferencia,
+            fecha_procesamiento: batchInfo.fecha_procesamiento,
+            estado: batchInfo.estado,
             cantidad_animales: animalsInBatch.length,
-            tipo: 'batch'
+            peso_total: batchInfo.peso_total,
+            animal_ids: animalsInBatch,
+            tipo: 'lote'
+          });
+          
+          console.log(`✅ Lote pendiente encontrado: #${batchId}`, {
+            estado: batchInfo.estado,
+            frigorifico: batchInfo.frigorifico,
+            animales: animalsInBatch.length
           });
         }
       } catch (error) {
@@ -2373,7 +2579,7 @@ async getPendingBatchesForFrigorifico(): Promise<any[]> {
       }
     }
     
-    console.log(`✅ ${pendingBatches.length} lotes pendientes de aceptación`);
+    console.log(`✅ [CORREGIDO] ${pendingBatches.length} lotes pendientes encontrados`);
     return pendingBatches;
     
   } catch (error: any) {
@@ -2381,165 +2587,530 @@ async getPendingBatchesForFrigorifico(): Promise<any[]> {
     return [];
   }
 }
+  /**
+ * Función auxiliar para obtener información de múltiples animales
+ */
+  private async getAnimalsInfo(animalIds: bigint[]): Promise<any[]> {
+    const animalsInfo = [];
+    
+    for (const animalId of animalIds) {
+      try {
+        const animalData = await this.getAnimalData(animalId);
+        animalsInfo.push({
+          id: animalId,
+          raza: animalData.raza,
+          peso: animalData.peso,
+          estado: animalData.estado
+        });
+      } catch (error) {
+        console.log(`Error obteniendo info del animal #${animalId}`);
+      }
+    }
+    
+    return animalsInfo;
+  }
+
+  /**
+   * Aceptar y pagar por un animal individual
+   */
+  async acceptAnimalWithPayment(animalId: bigint): Promise<{ txHash: string; payment: TransferPayment }> {
+    try {
+      console.log(`💰 Aceptando animal #${animalId} con pago...`);
+      
+      // Verificar que el animal esté pendiente de aceptación
+      const animalData = await this.getAnimalData(animalId);
+      if (animalData.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este animal no está asignado a tu frigorífico');
+      }
+      
+      if (animalData.estado !== EstadoAnimal.CREADO) {
+        throw new Error('Este animal ya ha sido procesado o aceptado');
+      }
+      
+      // ✅ USAR la nueva interfaz del servicio actualizado
+      const paymentResult = await this.chipyPay.acceptAnimalWithPayment(
+        animalId,
+        this.wallet.selectedAddress, // Frigorífico paga
+        animalData.propietario // Productor recibe
+      );
+
+      // Completar la aceptación en el contrato
+      const contractResult = await this.acceptAnimalTransfer(animalId);
+      
+      console.log(`✅ Animal #${animalId} aceptado y pagado exitosamente`);
+      
+      return {
+        txHash: paymentResult.txHash,
+        payment: paymentResult.payment
+      };
+      
+    } catch (error: any) {
+      console.error('❌ Error aceptando animal:', error);
+      throw new Error(`Error aceptando animal: ${error.message}`);
+    }
+  }
+
+  /**
+   * Aceptar y pagar por un lote completo
+   */
+  async acceptBatchWithPayment(batchId: bigint): Promise<{ txHash: string; payment: TransferPayment }> {
+    try {
+      console.log(`💰 Aceptando lote #${batchId} con pago...`);
+      
+      // Verificar que el lote esté pendiente de aceptación
+      const batchInfo = await this.getBatchInfo(batchId);
+      if (batchInfo.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este lote no está asignado a tu frigorífico');
+      }
+      
+      if (batchInfo.estado !== 0) {
+        throw new Error('Este lote ya ha sido procesado o aceptado');
+      }
+      
+      if (!batchInfo.animal_ids || batchInfo.animal_ids.length === 0) {
+        throw new Error('El lote no contiene animales');
+      }
+      
+      // ✅ USAR la nueva interfaz del servicio actualizado
+      const paymentResult = await this.chipyPay.acceptBatchWithPayment(
+        batchId,
+        this.wallet.selectedAddress, // Frigorífico paga
+        batchInfo.propietario, // Productor recibe
+        batchInfo.animal_ids.length
+      );
+
+      // Completar la aceptación en el contrato
+      const contractResult = await this.acceptBatchTransfer(batchId);
+      
+      console.log(`✅ Lote #${batchId} aceptado y pagado exitosamente`);
+      
+      return {
+        txHash: paymentResult.txHash,
+        payment: paymentResult.payment
+      };
+      
+    } catch (error: any) {
+      console.error('❌ Error aceptando lote:', error);
+      throw new Error(`Error aceptando lote: ${error.message}`);
+    }
+  }
+
+  /**
+   * Aceptar transferencia de animal individual (sin pago - para compatibilidad)
+   */
+  async acceptAnimalTransfer(animalId: bigint): Promise<string> {
+    try {
+      console.log(`✅ Aceptando transferencia de animal #${animalId}`);
+      
+      // Verificar que el animal esté asignado a este frigorífico
+      const animalData = await this.getAnimalData(animalId);
+      if (animalData.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este animal no está asignado a tu frigorífico');
+      }
+      
+      const result = await this.sendTransaction(
+        'procesar_animal',
+        [animalId.toString()]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      console.log('✅ Transferencia de animal aceptada');
+      return txHash;
+      
+    } catch (error: any) {
+      console.error('❌ Error aceptando transferencia de animal:', error);
+      throw new Error(`Error aceptando transferencia: ${error.message}`);
+    }
+  }
+
+  /**
+   * Aceptar transferencia de lote (sin pago - para compatibilidad)
+   */
+  async acceptBatchTransfer(batchId: bigint): Promise<string> {
+    try {
+      console.log(`✅ Aceptando transferencia de lote #${batchId}`);
+      
+      // Verificar que el lote esté asignado a este frigorífico
+      const batchInfo = await this.getBatchInfo(batchId);
+      if (batchInfo.frigorifico !== this.wallet.selectedAddress) {
+        throw new Error('Este lote no está asignado a tu frigorífico');
+      }
+      
+      const result = await this.sendTransaction(
+        'procesar_batch',
+        [batchId.toString()]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      console.log('✅ Transferencia de lote aceptada');
+      return txHash;
+      
+    } catch (error: any) {
+      console.error('❌ Error aceptando transferencia de lote:', error);
+      throw new Error(`Error aceptando transferencia: ${error.message}`);
+    }
+  }
+
+  /**
+   * Obtener datos de lote (alias de getBatchInfo para compatibilidad)
+   */
+  async getBatchData(batchId: bigint): Promise<any> {
+    return this.getBatchInfo(batchId);
+  }
+
+  /**
+   * Crear múltiples cortes para un lote
+   */
+  async crearCortesParaBatch(
+    batchId: bigint,
+    tiposCorte: TipoCorte[],
+    pesos: bigint[]
+  ): Promise<{ corteIds: bigint[]; txHash: string }> {
+    try {
+      console.log(`🥩 Creando ${tiposCorte.length} cortes para lote #${batchId}`);
+      
+      if (tiposCorte.length !== pesos.length) {
+        throw new Error('La cantidad de tipos de corte debe coincidir con la cantidad de pesos');
+      }
+
+      const tiposCorteStr = tiposCorte.map(tipo => tipo.toString());
+      const pesosStr = pesos.map(peso => peso.toString());
+      
+      const result = await this.sendTransaction(
+        'crear_cortes_para_batch', // String directamente
+        [
+          batchId.toString(),
+          tiposCorteStr.length,
+          ...tiposCorteStr,
+          pesosStr.length,
+          ...pesosStr
+        ]
+      );
+
+      const txHash = this.extractTransactionHash(result);
+      
+      // Obtener IDs de cortes creados
+      const corteIds = await this.getCortesForBatch(batchId);
+      
+      console.log('✅ Cortes para lote creados exitosamente:', corteIds.length);
+      return { corteIds, txHash };
+    } catch (error: any) {
+      console.error('❌ Error creando cortes para lote:', error);
+      throw new Error(`Error creando cortes: ${error.message}`);
+    }
+  }
+
+  /**
+   * Obtener todas las transferencias pendientes (animales + lotes)
+   */
+  async getAllPendingTransfers(): Promise<{ animals: any[]; batches: any[] }> {
+    try {
+      console.log('🔍 Obteniendo todas las transferencias pendientes...');
+      
+      const [animals, batches] = await Promise.all([
+        this.getPendingAnimalsForFrigorifico(),
+        this.getPendingBatchesForFrigorifico()
+      ]);
+      
+      console.log(`✅ ${animals.length} animales + ${batches.length} lotes pendientes`);
+      return { animals, batches };
+      
+    } catch (error: any) {
+      console.error('❌ Error obteniendo transferencias pendientes:', error);
+      return { animals: [], batches: [] };
+    }
+  }
+
+  // Agrega esto en tu AnimalContractService (src/services/animalContractService.ts)
 
 /**
- * Aceptar y pagar por un animal individual
+ * ✅ NUEVA FUNCIÓN: Obtener el recibo de una transacción
  */
-async acceptAnimalWithPayment(animalId: bigint, paymentAmount?: bigint): Promise<{ txHash: string; payment: any }> {
+async getTransactionReceipt(txHash: string, blockNumber?: number): Promise<any> {
   try {
-    console.log(`💰 Aceptando animal #${animalId} con pago...`);
+    console.log(`📄 Obteniendo recibo de transacción: ${txHash}`);
     
-    // Verificar que el animal esté pendiente de aceptación
-    const animalData = await this.getAnimalData(animalId);
-    if (animalData.frigorifico !== this.wallet.selectedAddress) {
-      throw new Error('Este animal no está asignado a tu frigorífico');
+    if (!this.wallet?.provider) {
+      throw new Error('Provider no disponible');
     }
+
+    // Usar el provider de Starknet para obtener el recibo
+    const receipt = await this.wallet.provider.getTransactionReceipt(txHash);
     
-    if (animalData.estado !== EstadoAnimal.CREADO) {
-      throw new Error('Este animal ya ha sido procesado o aceptado');
-    }
+    console.log('📊 Recibo obtenido:', {
+      status: receipt.status,
+      block_hash: receipt.block_hash,
+      block_number: receipt.block_number,
+      events: receipt.events?.length || 0
+    });
     
-    // Procesar pago a través de ChipyPay
-    const payment = await this.chipyPay.processAcceptancePayment(
-      animalId,
-      this.wallet.selectedAddress,
-      animalData.propietario,
-      paymentAmount
-    );
-    
-    // Aquí debería haber una función del contrato para confirmar la aceptación
-    // Por ahora, usamos procesar_animal como placeholder
-    const result = await this.sendTransaction(
-      CONTRACT_FUNCTIONS.PROCESAR_ANIMAL,
-      [animalId.toString()]
-    );
-    
-    const txHash = this.extractTransactionHash(result);
-    
-    console.log('✅ Animal aceptado y pagado exitosamente');
-    return { txHash, payment };
+    return receipt;
     
   } catch (error: any) {
-    console.error('❌ Error aceptando animal:', error);
-    throw new Error(`Error aceptando animal: ${error.message}`);
+    console.error(`❌ Error obteniendo recibo de transacción ${txHash}:`, error);
+    throw new Error(`Error obteniendo recibo: ${error.message}`);
   }
 }
 
 /**
- * Aceptar y pagar por un lote completo
+ * ✅ FUNCIÓN ALTERNATIVA: Obtener eventos de transacción usando callContract
  */
-// EN AnimalContractService - USAR LA FUNCIÓN CORRECTA
-/**
- * Aceptar y pagar por un lote completo - VERSIÓN CORREGIDA
- */
-async acceptBatchWithPayment(batchId: bigint, paymentAmount?: bigint): Promise<{ txHash: string; payment: any }> {
+async getTransactionEvents(txHash: string): Promise<any[]> {
   try {
-    console.log(`💰 Aceptando lote #${batchId} con pago...`);
+    console.log(`🔍 Buscando eventos de transacción: ${txHash}`);
     
-    // Verificar que el lote esté pendiente de aceptación
-    const batchInfo = await this.getBatchInfo(batchId);
-    if (batchInfo.frigorifico !== this.wallet.selectedAddress) {
-      throw new Error('Este lote no está asignado a tu frigorífico');
+    // Intentar obtener eventos usando callContract si existe la función
+    try {
+      const result = await this.callContract('get_transaction_events', [txHash]);
+      if (result && Array.isArray(result)) {
+        console.log(`✅ ${result.length} eventos obtenidos del contrato`);
+        return result;
+      }
+    } catch (error) {
+      console.log('Función get_transaction_events no disponible en el contrato');
     }
     
-    if (batchInfo.estado !== 0) {
-      throw new Error('Este lote ya ha sido procesado o aceptado');
-    }
-    
-    if (!batchInfo.animal_ids || batchInfo.animal_ids.length === 0) {
-      throw new Error('El lote no contiene animales');
-    }
-    
-    // Calcular precio basado en cantidad de animales
-    const basePrice = CHIPYPAY_CONFIG.BASE_PRICES.ANIMAL_ACCEPTANCE;
-    const calculatedAmount = paymentAmount || (basePrice * BigInt(batchInfo.animal_ids.length));
-    
-    // Procesar pago
-    const payment = await this.chipyPay.processAcceptancePayment(
-      batchId,
-      this.wallet.selectedAddress,
-      batchInfo.propietario,
-      calculatedAmount
+    // Si no hay función específica, intentar obtener eventos de forma genérica
+    // Buscar eventos recientes que coincidan con el txHash
+    const recentEvents = await this.getRecentEvents();
+    const txEvents = recentEvents.filter((event: any) => 
+      event.transaction_hash === txHash
     );
     
-    // ✅ USAR LA FUNCIÓN CORRECTA - PROCESAR_BATCH
-    const result = await this.sendTransaction(
-      'procesar_batch', // Usar el string directamente
-      [batchId.toString()]
-    );
-    
-    const txHash = this.extractTransactionHash(result);
-    
-    console.log('✅ Lote aceptado y pagado exitosamente');
-    return { txHash, payment };
+    console.log(`✅ ${txEvents.length} eventos encontrados para transacción`);
+    return txEvents;
     
   } catch (error: any) {
-    console.error('❌ Error aceptando lote:', error);
-    throw new Error(`Error aceptando lote: ${error.message}`);
+    console.error(`❌ Error obteniendo eventos de transacción:`, error);
+    return [];
   }
 }
 
 /**
- * Crear múltiples cortes para un lote
+ * ✅ FUNCIÓN AUXILIAR: Obtener eventos recientes del contrato
  */
-async crearCortesParaBatch(
-  batchId: bigint,
-  tiposCorte: TipoCorte[],
-  pesos: bigint[]
-): Promise<{ corteIds: bigint[]; txHash: string }> {
+private async getRecentEvents(): Promise<any[]> {
   try {
-    console.log(`🥩 Creando ${tiposCorte.length} cortes para lote #${batchId}`);
+    // Obtener el bloque actual
+    const blockNumber = await this.wallet.provider.getBlockNumber();
+    console.log(`📦 Bloque actual: ${blockNumber}`);
     
-    if (tiposCorte.length !== pesos.length) {
-      throw new Error('La cantidad de tipos de corte debe coincidir con la cantidad de pesos');
-    }
-
-    const tiposCorteStr = tiposCorte.map(tipo => tipo.toString());
-    const pesosStr = pesos.map(peso => peso.toString());
+    // Buscar eventos desde los últimos 100 bloques
+    const fromBlock = Math.max(0, blockNumber - 100);
     
-    const result = await this.sendTransaction(
-      'crear_cortes_para_batch', // String directamente
-      [
-        batchId.toString(),
-        tiposCorteStr.length,
-        ...tiposCorteStr,
-        pesosStr.length,
-        ...pesosStr
-      ]
-    );
-
-    const txHash = this.extractTransactionHash(result);
+    // Filtrar eventos del contrato actual
+    const events = await this.wallet.provider.getEvents({
+      from_block: { block_number: fromBlock },
+      to_block: { block_number: blockNumber },
+      address: this.contractAddress,
+      keys: [[]] // Todos los eventos
+    });
     
-    // Obtener IDs de cortes creados
-    const corteIds = await this.getCortesForBatch(batchId);
+    console.log(`📊 ${events.length} eventos encontrados en últimos 100 bloques`);
+    return events;
     
-    console.log('✅ Cortes para lote creados exitosamente:', corteIds.length);
-    return { corteIds, txHash };
   } catch (error: any) {
-    console.error('❌ Error creando cortes para lote:', error);
-    throw new Error(`Error creando cortes: ${error.message}`);
+    console.error('❌ Error obteniendo eventos recientes:', error);
+    return [];
   }
 }
+
 /**
- * Obtener todas las transferencias pendientes (animales + lotes)
+ * ✅ FUNCIÓN MEJORADA: Buscar animales por transacción
  */
-async getAllPendingTransfers(): Promise<{ animals: any[]; batches: any[] }> {
+async findAnimalsByTransaction(txHash: string): Promise<bigint[]> {
   try {
-    console.log('🔍 Obteniendo todas las transferencias pendientes...');
+    console.log(`🔍 Buscando animales creados en transacción: ${txHash}`);
     
-    const [animals, batches] = await Promise.all([
-      this.getPendingAnimalsForFrigorifico(),
-      this.getPendingBatchesForFrigorifico()
-    ]);
+    const animalIds: bigint[] = [];
     
-    console.log(`✅ ${animals.length} animales + ${batches.length} lotes pendientes`);
-    return { animals, batches };
+    // Método 1: Buscar en eventos de la transacción
+    const receipt = await this.getTransactionReceipt(txHash);
+    
+    if (receipt.events && receipt.events.length > 0) {
+      console.log(`📋 Analizando ${receipt.events.length} eventos...`);
+      
+      for (const event of receipt.events) {
+        console.log('🔍 Evento:', {
+          from_address: event.from_address,
+          keys: event.keys,
+          data: event.data
+        });
+        
+        // Buscar eventos de AnimalCreado
+        if (event.from_address === this.contractAddress) {
+          // El animalId podría estar en event.data[0] o event.keys[0]
+          let animalId: bigint | null = null;
+          
+          // Intentar extraer de event.data
+          if (event.data && event.data.length > 0) {
+            try {
+              animalId = BigInt(event.data[0]);
+              console.log(`🐄 Posible animal encontrado en data[0]: ${animalId}`);
+            } catch (error) {
+              // No es un número válido
+            }
+          }
+          
+          // Intentar extraer de event.keys
+          if (!animalId && event.keys && event.keys.length > 0) {
+            try {
+              animalId = BigInt(event.keys[0]);
+              console.log(`🐄 Posible animal encontrado en keys[0]: ${animalId}`);
+            } catch (error) {
+              // No es un número válido
+            }
+          }
+          
+          if (animalId && animalId > BigInt(0)) {
+            // Verificar que el animal existe
+            try {
+              const animalData = await this.getAnimalData(animalId);
+              if (animalData && animalData.propietario) {
+                animalIds.push(animalId);
+                console.log(`✅ Animal #${animalId} confirmado en blockchain`);
+              }
+            } catch (error) {
+              console.log(`❌ Animal #${animalId} no existe o error:`, error);
+            }
+          }
+        }
+      }
+    }
+    
+    // Método 2: Buscar en estadísticas del sistema
+    if (animalIds.length === 0) {
+      console.log('🔍 Buscando por estadísticas del sistema...');
+      const stats = await this.getSystemStats();
+      const totalAnimals = Number(stats.total_animals_created || 0);
+      
+      console.log(`📊 Revisando ${totalAnimals} animales en el sistema...`);
+      
+      // Buscar animales creados recientemente
+      for (let i = Math.max(1, totalAnimals - 10); i <= totalAnimals; i++) {
+        try {
+          const animalId = BigInt(i);
+          const animalData = await this.getAnimalData(animalId);
+          
+          // Si el animal existe y fue creado recientemente, podría ser de esta transacción
+          if (animalData && animalData.propietario) {
+            animalIds.push(animalId);
+            console.log(`🐄 Animal reciente encontrado: #${animalId}`);
+          }
+        } catch (error) {
+          // Continuar con siguiente animal
+        }
+      }
+    }
+    
+    console.log(`✅ ${animalIds.length} animales encontrados para transacción ${txHash}`);
+    return animalIds;
     
   } catch (error: any) {
-    console.error('❌ Error obteniendo transferencias pendientes:', error);
-    return { animals: [], batches: [] };
+    console.error(`❌ Error buscando animales por transacción:`, error);
+    return [];
   }
 }
 
+// AGREGAR ESTO AL AnimalContractService (src/services/animalContractService.ts)
+
+/**
+ * ✅ NUEVO MÉTODO: Obtener la dirección del usuario conectado
+ */
+getUserAddress(): string {
+  if (!this.wallet || !this.wallet.selectedAddress) {
+    throw new Error('Wallet no conectada');
+  }
+  return this.wallet.selectedAddress;
+}
+
+/**
+ * ✅ NUEVO MÉTODO: Verificar si la wallet está conectada
+ */
+isConnected(): boolean {
+  return !!(this.wallet && this.wallet.selectedAddress);
+}
+
+// AGREGAR ESTO AL AnimalContractService (src/services/animalContractService.ts)
+
+/**
+ * ✅ FUNCIÓN ALTERNATIVA: Obtener TODOS los animales del usuario escaneando la blockchain
+ */
+async getAllUserAnimals(): Promise<bigint[]> {
+  try {
+    console.log('🔍 [ALTERNATIVA] Obteniendo TODOS los animales del usuario escaneando blockchain...');
+    
+    const userAnimals: bigint[] = [];
+    const userAddress = this.getUserAddress();
+    
+    // Obtener estadísticas del sistema para saber cuántos animales hay
+    const stats = await this.getSystemStats();
+    const totalAnimals = Number(stats.total_animals_created || 0);
+    
+    console.log(`📊 Revisando ${totalAnimals} animales en el sistema para el usuario ${userAddress}...`);
+    
+    let animalsFound = 0;
+    
+    // Escanear desde el animal #1 hasta el total
+    for (let i = 1; i <= totalAnimals; i++) {
+      try {
+        const animalId = BigInt(i);
+        const animalData = await this.getAnimalData(animalId);
+        
+        // Verificar si el animal pertenece al usuario actual
+        if (animalData.propietario === userAddress) {
+          userAnimals.push(animalId);
+          animalsFound++;
+          console.log(`✅ Animal #${animalId} pertenece al usuario (Total: ${animalsFound})`);
+        }
+      } catch (error) {
+        // Animal no existe o error, continuar con el siguiente
+        console.log(`Animal #${i} no disponible o error`);
+      }
+    }
+    
+    console.log(`🎯 [ALTERNATIVA] ${userAnimals.length} animales encontrados para el usuario`);
+    return userAnimals;
+    
+  } catch (error: any) {
+    console.error('❌ Error obteniendo animales del usuario (método alternativo):', error);
+    return [];
+  }
+}
+
+/**
+ * ✅ FUNCIÓN MEJORADA: Obtener animales del usuario con método alternativo
+ */
+async getAnimalsByProducerSafe(producer: string): Promise<bigint[]> {
+  try {
+    console.log(`🔍 Obteniendo animales del productor: ${producer}`);
+    
+    // Primero intentar con el método normal
+    try {
+      const result = await this.callContract('get_animals_by_producer', [producer]);
+      const animalIds = result.map((id: string) => BigInt(id));
+      
+      console.log(`📊 Método normal: ${animalIds.length} animales encontrados`);
+      
+      // Si encontramos animales, retornarlos
+      if (animalIds.length > 0) {
+        return animalIds;
+      }
+    } catch (error) {
+      console.log('❌ Método normal falló, usando alternativa...');
+    }
+    
+    // Si el método normal falla o no encuentra animales, usar el alternativo
+    return await this.getAllUserAnimals();
+    
+  } catch (error: any) {
+    console.error('❌ Error obteniendo animales del productor:', error);
+    return [];
+  }
+}
+
+getContractAddress(): string {
+  return this.contractAddress;
+}
 
 }
