@@ -1,2 +1,2 @@
 // src/components/frigorifico/index.ts
-export { FrigorificoPanel } from './FrigorificoPanel';
+export { FrigorificoDashboard } from './FrigorificoPanel';
