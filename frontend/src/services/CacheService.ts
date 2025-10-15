@@ -14,7 +14,7 @@ class CacheService {
   }
 
   private determineBaseURL(): string {
-    return 'https://unsharply-unsupplementary-adell.ngrok-free.dev';
+    return 'https://break-prize-podcast-loose.trycloudflare.com';
   }
 
   private async testInitialConnection() {
