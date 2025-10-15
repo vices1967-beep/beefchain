@@ -10,7 +10,8 @@ export function AnimalPendienteCard({
   chipyProcessing,
   onAceptar,
   cacheAvailable,
-  blockchainAvailable
+  blockchainAvailable,
+  
 }: AnimalPendienteCardProps) {
   
   const pesoKg = animal.peso_kg || 0;

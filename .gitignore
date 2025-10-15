@@ -218,7 +218,7 @@ starknet/target/
 # Archivos de compilación de contratos
 *.sierra
 *.casm
-*.json
+
 
 # Archivos de desarrollo de StarkNet
 *.build/

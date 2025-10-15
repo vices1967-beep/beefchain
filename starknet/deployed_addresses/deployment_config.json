@@ -1,0 +1,11 @@
+{
+  "network": "sepolia",
+  "deployment_date": "lun 22 sep 2025 17:59:04 -03",
+  "wallet_address": "0x1baaeb194649d3ec0c78942f9b462bfaf602b9a4ec84275f3d8af78ea19df2e",
+  "contracts": {
+    "animal_nft_implementation": "0x02d9689c7e75ddda605652773c6d5c321a3007e8aa683c66406eeaea85772229",
+    "animal_nft_proxy": "0x05771e00af5dfe1419a92d2dfbbd23b4508b363aae73edca2d9933e9e99d9a1e",
+    "ganado_registry_implementation": "0x02df7403a1ed7a96436208eddcf2d8028c33b26cbec4a65f604df96c4b1eafc4",
+    "ganado_registry_proxy": "0x04d516d356cc45802dc9a7e56ac9bf54e1d418a84c6b7762253d42930e58f05c"
+  }
+}
