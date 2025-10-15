@@ -11,7 +11,7 @@ export function LotePendienteCard({
   onAceptar,
   onProcesar,
   cacheAvailable,
-  blockchainAvailable
+  blockchainAvailable,
 }: LotePendienteCardProps) {
   
   const pesoTotalKg = lote.peso_total_kg || 0;

@@ -1,4 +1,4 @@
-// src/components/frigorifico/FrigorificoDashboard.tsx - VERSIÓN CORREGIDA
+// src/components/frigorifico/FrigorificoDashboard.tsx - VERSIÓN COMPLETA CORREGIDA
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -44,6 +44,39 @@ export function FrigorificoDashboard() {
   // Estados para sincronización
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  
+  // Estado para verificación de rol frigorífico
+  const [isFrigorifico, setIsFrigorifico] = useState(false);
+
+  // 🔍 VERIFICAR ROL DE FRIGORÍFICO
+  useEffect(() => {
+    const verificarRolFrigorifico = async () => {
+      if (!contractService || !address) {
+        setIsFrigorifico(false);
+        return;
+      }
+
+      try {
+        console.log('🔍 Verificando rol FRIGORIFICO_ROLE para:', address);
+        
+        // Verificar si tiene el rol FRIGORIFICO_ROLE
+        const tieneRol = await contractService.hasRole('FRIGORIFICO_ROLE', address);
+        console.log('✅ Resultado verificación rol frigorífico:', tieneRol);
+        
+        setIsFrigorifico(tieneRol);
+        
+        if (!tieneRol) {
+          console.warn('⚠️ La cuenta NO tiene rol FRIGORIFICO_ROLE');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error verificando rol frigorífico:', error);
+        setIsFrigorifico(false);
+      }
+    };
+
+    verificarRolFrigorifico();
+  }, [contractService, address]);
 
   // 🔄 CONFIGURAR SYNC SERVICE
   useEffect(() => {
@@ -676,11 +709,13 @@ export function FrigorificoDashboard() {
         </button>
       </div>
 
-      {/* Información del frigorífico */}
+      {/* Información del frigorífico - CON VERIFICACIÓN DE ROL */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <h4 className="font-semibold text-blue-800 mb-1">🏭 Frigorífico Conectado</h4>
+            <h4 className="font-semibold text-blue-800 mb-1">
+              🏭 Frigorífico {isFrigorifico ? '✅ Verificado' : '❌ No verificado'}
+            </h4>
             <p className="text-blue-700 text-sm font-mono">
               {address ? `${address.slice(0, 10)}...${address.slice(-8)}` : 'No conectado'}
             </p>
@@ -692,6 +727,11 @@ export function FrigorificoDashboard() {
             <p className="text-blue-600 text-xs">
               {transferenciasPendientes.animals.length} animales • {transferenciasPendientes.batches.length} lotes
             </p>
+            {!isFrigorifico && (
+              <div className="text-red-600 text-sm bg-red-50 px-2 py-1 rounded mt-1">
+                ⚠️ Sin permisos de frigorífico
+              </div>
+            )}
             {cargando && (
               <span className="text-blue-500 text-xs mt-1 flex items-center gap-1">
                 <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></span>
@@ -797,6 +837,7 @@ export function FrigorificoDashboard() {
           onRecargar={handleRecargar}
           contractService={contractService}
           address={address || ''}
+          isFrigorifico={isFrigorifico} // ← PASAR LA VERIFICACIÓN REAL
         />
       )}
 

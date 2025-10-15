@@ -155,6 +155,7 @@ export interface LotePendienteCardProps {
   onProcesar: () => Promise<void>;
   cacheAvailable: boolean;
   blockchainAvailable: boolean;
+  isFrigorifico: boolean; // ← AGREGAR ESTA LÍNEA
 }
 
 export interface AnimalPendienteCardProps {
@@ -165,6 +166,7 @@ export interface AnimalPendienteCardProps {
   onAceptar: () => Promise<void>;
   cacheAvailable: boolean;
   blockchainAvailable: boolean;
+  isFrigorifico: boolean; // ← AGREGAR ESTA LÍNEA
 }
 
 // ============ TIPOS PARA CERTIFICACIÓN ============

@@ -4,6 +4,7 @@ import { ConnectWallet } from '@/components/common/ConnectWallet'
 import { useStarknet } from '@/providers/starknet-provider'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { IoTCard } from '@/components/iot/IoTCard'
 
 export default function Home() {
   const { 
@@ -460,6 +461,7 @@ export default function Home() {
               delay={100}
               requiredRole="FRIGORIFICO_ROLE"
             />
+            <IoTCard /> {/* Nueva card IoT */}
             <RoleCard
               href="/veterinario"
               icon="⚕️"
